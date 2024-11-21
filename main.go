@@ -4,6 +4,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	_ "github.com/huangyul/go-blog/internal/pkg/ginx/validator"
 	"github.com/huangyul/go-blog/internal/repository"
 	"github.com/huangyul/go-blog/internal/repository/dao"
 	"github.com/huangyul/go-blog/internal/service"

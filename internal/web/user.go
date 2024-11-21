@@ -1,6 +1,7 @@
 package web
 
 import (
+	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
 	"net/http"
 
 	regexp "github.com/dlclark/regexp2"
@@ -48,7 +49,7 @@ func (h *UserHandler) Signup(ctx *gin.Context) {
 
 	var req Req
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(200, validator.Translate(err))
 		return
 	}
 

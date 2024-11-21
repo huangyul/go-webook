@@ -2,14 +2,12 @@ package dao
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/huangyul/go-blog/internal/pkg/errno"
 	"gorm.io/gorm"
-)
-
-var (
-	ErrDuplicate = gorm.ErrDuplicatedKey
 )
 
 type UserDAO interface {
@@ -31,6 +29,9 @@ func NewUserDAO(db *gorm.DB) UserDAO {
 func (dao *UserDAOGORM) FindByEmail(ctx context.Context, email string) (User, error) {
 	var user User
 	err := dao.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return User{}, errno.ErrNotFoundUser
+	}
 	return user, err
 }
 
@@ -40,11 +41,9 @@ func (dao *UserDAOGORM) Insert(ctx context.Context, user User) error {
 	user.CreatedAt = now
 	user.UpdatedAt = now
 	err := dao.db.WithContext(ctx).Create(&user).Error
-	if err != nil {
-		if e, ok := err.(*mysql.MySQLError); ok {
-			if e.Error() == "Error 1062: Duplicate entry" {
-				return ErrDuplicate
-			}
+	if e, ok := err.(*mysql.MySQLError); ok {
+		if e.Error() == "Error 1062: Duplicate entry" {
+			return errno.ErrEmailAlreadyExist
 		}
 	}
 	return err
