@@ -1,8 +1,11 @@
 package web
 
 import (
-	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
+	"errors"
 	"net/http"
+
+	"github.com/huangyul/go-blog/internal/pkg/errno"
+	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
 
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
@@ -49,38 +52,38 @@ func (h *UserHandler) Signup(ctx *gin.Context) {
 
 	var req Req
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.JSON(200, validator.Translate(err))
+		WriteError(ctx, errno.ErrBadRequest.Code, validator.Translate(err))
 		return
 	}
 
 	if req.Password != req.ConfirmPassword {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "password does not match"})
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("password not match"))
 		return
 	}
 
 	ok, err := h.emailRexExp.MatchString(req.Email)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		WriteErrno(ctx, errno.ErrInternalServer)
 		return
 	}
 	if !ok {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "illegal email"})
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("illegal email"))
 		return
 	}
 
 	ok, err = h.passwordRexExp.MatchString(req.Password)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return
 	}
 	if !ok {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Password are only contain letters and numbers"})
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("Password are only contain letters and numbers"))
 		return
 	}
 
 	err = h.svc.Signup(ctx, req.Email, req.Password)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{})
@@ -93,12 +96,16 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	}
 	var req Req
 	if err := ctx.ShouldBind(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(validator.Translate(err)))
 		return
 	}
 	user, err := h.svc.Login(ctx, req.Email, req.Password)
+	if errors.Is(err, errno.ErrNotFoundUser) {
+		WriteErrno(ctx, errno.ErrEmailOrPasswordError)
+		return
+	}
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return
 	}
 	sess := sessions.Default(ctx)
@@ -107,12 +114,10 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		MaxAge: 86400,
 	})
 	if err := sess.Save(); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"msg": "login success",
-	})
+	WriteSuccess(ctx, nil)
 }
 
 func (h *UserHandler) Edit(ctx *gin.Context) {

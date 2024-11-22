@@ -1,7 +1,6 @@
 package errno
 
 type Errno struct {
-	HTTP    int    `json:"http"`
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
@@ -15,14 +14,6 @@ func (err *Errno) SetMessage(message string) *Errno {
 	return err
 }
 
-func Decode(err error) *Errno {
-	if err == nil {
-		return ErrOK
-	}
-	switch v := err.(type) {
-	case *Errno:
-		return v
-	default:
-		return ErrInternalServer
-	}
+func (err *Errno) Decode() (int, string) {
+	return err.Code, err.Message
 }

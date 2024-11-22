@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
-
 	"github.com/huangyul/go-blog/internal/domain"
 	"github.com/huangyul/go-blog/internal/pkg/errno"
 	"github.com/huangyul/go-blog/internal/repository"
@@ -30,7 +28,7 @@ func NewUserService(repo repository.UserRepository) UserService {
 func (svc *userService) Login(ctx context.Context, email string, password string) (domain.User, error) {
 	u, err := svc.repo.FindByEmail(ctx, email)
 	if errors.Is(err, errno.ErrNotFoundUser) {
-		return domain.User{}, fmt.Errorf("service err: user not found: %w", err)
+		return domain.User{}, errno.ErrNotFoundUser
 	}
 	if err != nil {
 		return domain.User{}, errno.ErrInternalServer
@@ -38,7 +36,7 @@ func (svc *userService) Login(ctx context.Context, email string, password string
 
 	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 	if err != nil {
-		return domain.User{}, errno.ErrInternalServer
+		return domain.User{}, errno.ErrNotFoundUser
 	}
 
 	return u, nil

@@ -1,8 +1,10 @@
 package web
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/huangyul/go-blog/internal/pkg/errno"
 )
 
 type Response struct {
@@ -19,10 +21,18 @@ func WriteResponse(ctx *gin.Context, code int, message string, data interface{})
 	})
 }
 
-func WriteError(ctx *gin.Context, httpCode int, code int, message string, data interface{}) {
-	ctx.JSON(httpCode, Response{
+func WriteError(ctx *gin.Context, code int, message string) {
+	ctx.JSON(http.StatusOK, Response{
 		Code:    code,
 		Message: message,
-		Data:    data,
+		Data:    nil,
 	})
+}
+
+func WriteErrno(ctx *gin.Context, err *errno.Errno) {
+	WriteError(ctx, err.Code, err.Message)
+}
+
+func WriteSuccess(ctx *gin.Context, data interface{}) {
+	WriteResponse(ctx, 0, "success", data)
 }

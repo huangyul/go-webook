@@ -1,6 +1,9 @@
 package validator
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/locales/en"
 	"github.com/go-playground/locales/zh"
@@ -8,8 +11,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	enTran "github.com/go-playground/validator/v10/translations/en"
 	chTran "github.com/go-playground/validator/v10/translations/zh"
-	"regexp"
-	"strings"
 )
 
 var trans ut.Translator
@@ -42,16 +43,24 @@ func init() {
 	}
 }
 
-func Translate(err error) map[string]string {
+func Translate(err error) string {
+
 	if err == nil {
-		return nil
+		return ""
 	}
-	raw := err.(validator.ValidationErrors).Translate(trans)
-	res := make(map[string]string)
-	for k, v := range raw {
-		res[pascalToSnake(strings.Split(k, ".")[1])] = convertToSnakeCase(v)
+
+	typ, ok := err.(validator.ValidationErrors)
+
+	if !ok {
+		return "no jion structure"
 	}
-	return res
+
+	raw := typ.Translate(trans)
+
+	for _, v := range raw {
+		return convertToSnakeCase(v)
+	}
+	return ""
 }
 
 func pascalToSnake(s string) string {
