@@ -52,7 +52,7 @@ func Translate(err error) string {
 	typ, ok := err.(validator.ValidationErrors)
 
 	if !ok {
-		return "no jion structure"
+		return "no json structure"
 	}
 
 	raw := typ.Translate(trans)
