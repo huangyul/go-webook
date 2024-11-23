@@ -38,7 +38,9 @@ func InitServer() *gin.Engine {
 	server := gin.Default()
 
 	server.Use(sessions.Sessions("mysession", cookie.NewStore([]byte("secret"))))
-	server.Use((middleware.LoginMiddleBuilder{}).Build())
+	//server.Use((middleware.LoginMiddleBuilder{}).Build())
+
+	server.Use(middleware.NewJWTLoginMiddlewareBuild().AddWhiteList("/user/login", "/user/signup").Build())
 
 	return server
 }

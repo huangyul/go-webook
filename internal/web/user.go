@@ -2,7 +2,9 @@ package web
 
 import (
 	"errors"
+	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"time"
 
 	"github.com/huangyul/go-blog/internal/pkg/errno"
 	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
@@ -108,6 +110,9 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return
 	}
+
+	// set login token
+	// type 1 session
 	sess := sessions.Default(ctx)
 	sess.Set("user_id", user.ID)
 	sess.Options(sessions.Options{
@@ -117,7 +122,27 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return
 	}
-	WriteSuccess(ctx, nil)
+	// type 2 jwt
+	c := JWTClaims{
+		UserID:    int(user.ID),
+		UserAgent: ctx.Request.UserAgent(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, c)
+	tokenStr, err := token.SignedString([]byte("JWT_TOKEN_KEY"))
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+	}
+
+	type LoginResp struct {
+		Token string `json:"token"`
+	}
+
+	WriteSuccess(ctx, LoginResp{
+		Token: tokenStr,
+	})
 }
 
 func (h *UserHandler) Edit(ctx *gin.Context) {
@@ -129,4 +154,10 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 		"msg": "profile",
 	})
 
+}
+
+type JWTClaims struct {
+	jwt.RegisteredClaims
+	UserID    int
+	UserAgent string
 }
