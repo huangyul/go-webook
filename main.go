@@ -10,8 +10,11 @@ import (
 	"github.com/huangyul/go-blog/internal/service"
 	"github.com/huangyul/go-blog/internal/web"
 	"github.com/huangyul/go-blog/internal/web/middleware"
+	"github.com/huangyul/go-blog/pkg/ginx/middleware/ratelimit"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"time"
 )
 
 func main() {
@@ -34,8 +37,19 @@ func InitDB() *gorm.DB {
 	return db
 }
 
+func InitRedis() *redis.Client {
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: "127.0.0.1:6379",
+	})
+	return redisClient
+}
+
 func InitServer() *gin.Engine {
 	server := gin.Default()
+
+	cmd := InitRedis()
+
+	server.Use(ratelimit.NewBuilder(cmd, 10, time.Second*60).Build())
 
 	server.Use(sessions.Sessions("mysession", cookie.NewStore([]byte("secret"))))
 	//server.Use((middleware.LoginMiddleBuilder{}).Build())
