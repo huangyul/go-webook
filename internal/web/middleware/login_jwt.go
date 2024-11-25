@@ -86,6 +86,8 @@ func (b *JWTLoginMiddlewareBuild) Build() gin.HandlerFunc {
 			ctx.Header("x-jwt-token", tokenStr)
 		}
 
+		ctx.Set("user_id", c.UserID)
+
 		ctx.Next()
 
 	}

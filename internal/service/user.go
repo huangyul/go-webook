@@ -12,12 +12,27 @@ import (
 type UserService interface {
 	Signup(ctx context.Context, email, password string) error
 	Login(ctx context.Context, email, password string) (domain.User, error)
+	UpdateUserInfo(ctx context.Context, user domain.User) error
+	GetUserInfo(ctx context.Context, id int64) (domain.User, error)
+	GetUserList(ctx context.Context, page, pageSize int) ([]domain.User, int, error)
 }
 
 var _ UserService = (*userService)(nil)
 
 type userService struct {
 	repo repository.UserRepository
+}
+
+func (svc *userService) GetUserList(ctx context.Context, page, pageSize int) ([]domain.User, int, error) {
+	return svc.repo.GetUserList(ctx, page, pageSize)
+}
+
+func (svc *userService) UpdateUserInfo(ctx context.Context, user domain.User) error {
+	return svc.repo.UpdateByID(ctx, user)
+}
+
+func (svc *userService) GetUserInfo(ctx context.Context, id int64) (domain.User, error) {
+	return svc.repo.FindById(ctx, id)
 }
 
 func NewUserService(repo repository.UserRepository) UserService {
@@ -51,5 +66,5 @@ func (svc *userService) Signup(ctx context.Context, email string, password strin
 	if err != nil {
 		return errno.ErrInternalServer
 	}
-	return svc.repo.Insert(ctx, domain.User{Eamil: email, Password: string(hash)})
+	return svc.repo.Insert(ctx, domain.User{Email: email, Password: string(hash)})
 }

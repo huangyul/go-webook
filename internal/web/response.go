@@ -13,6 +13,11 @@ type Response struct {
 	Data    interface{} `json:"data"`
 }
 
+type ListResp[T any] struct {
+	Datas []T `json:"datas"`
+	Total int `json:"total"`
+}
+
 func WriteResponse(ctx *gin.Context, code int, message string, data interface{}) {
 	ctx.JSON(http.StatusOK, Response{
 		Code:    code,

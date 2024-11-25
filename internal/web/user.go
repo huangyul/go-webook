@@ -3,7 +3,9 @@ package web
 import (
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/huangyul/go-blog/internal/domain"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/huangyul/go-blog/internal/pkg/errno"
@@ -42,6 +44,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/login", h.Login)
 	ug.POST("/edit", h.Edit)
 	ug.GET("/profile", h.Profile)
+	ug.GET("/list", h.List)
 }
 
 func (h *UserHandler) Signup(ctx *gin.Context) {
@@ -124,7 +127,7 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	}
 	// type 2 jwt
 	c := JWTClaims{
-		UserID:    int(user.ID),
+		UserID:    user.ID,
 		UserAgent: ctx.Request.UserAgent(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
@@ -146,18 +149,124 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 }
 
 func (h *UserHandler) Edit(ctx *gin.Context) {
+	type Req struct {
+		Birthday string `json:"birthday" binding:"required"`
+		AboutMe  string `json:"about_me" binding:"required"`
+		Nickname string `json:"nickname" binding:"required"`
+	}
+	var req Req
+	if err := ctx.ShouldBind(&req); err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(validator.Translate(err)))
+		return
+	}
+
+	birthday, err := time.Parse(time.DateOnly, req.Birthday)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("invalid birthday"))
+		return
+	}
+
+	id, _ := ctx.Get("user_id")
+	uID, ok := id.(int64)
+	if !ok {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("invalid user id"))
+		return
+	}
+
+	err = h.svc.UpdateUserInfo(ctx, domain.User{
+		ID:       uID,
+		Birthday: birthday,
+		AboutMe:  req.AboutMe,
+		Nickname: req.Nickname,
+	})
+
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+
+	WriteSuccess(ctx, nil)
 
 }
 
 func (h *UserHandler) Profile(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{
-		"msg": "profile",
+	id, _ := ctx.Get("user_id")
+
+	uID := id.(int64)
+
+	u, err := h.svc.GetUserInfo(ctx, uID)
+
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+
+	WriteSuccess(ctx, userResp{
+		ID:       u.ID,
+		Email:    u.Email,
+		Nickname: u.Nickname,
+		Birthday: u.Birthday.Format(time.DateOnly),
+		AboutMe:  u.AboutMe,
+		CreateAt: u.CreatedAt.Format(time.DateOnly),
+		UpdateAt: u.UpdatedAt.Format(time.DateOnly),
+	})
+
+}
+
+func (h *UserHandler) List(ctx *gin.Context) {
+	pageStr := ctx.Query("page")
+	pageSizeStr := ctx.Query("page_size")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("page must be number"))
+		return
+	}
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("page_size must be number"))
+		return
+	}
+
+	users, count, err := h.svc.GetUserList(ctx, page, pageSize)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+
+	var datas []userResp
+
+	for _, u := range users {
+		datas = append(datas, userResp{
+			ID:       u.ID,
+			Email:    u.Email,
+			Nickname: u.Nickname,
+			Birthday: u.Birthday.Format(time.DateOnly),
+			AboutMe:  u.AboutMe,
+			CreateAt: u.CreatedAt.Format(time.DateOnly),
+			UpdateAt: u.UpdatedAt.Format(time.DateOnly),
+		})
+	}
+
+	WriteSuccess(ctx, ListResp[userResp]{
+		Datas: datas,
+		Total: count,
 	})
 
 }
 
 type JWTClaims struct {
 	jwt.RegisteredClaims
-	UserID    int
+	UserID    int64
 	UserAgent string
+}
+
+type userResp struct {
+	ID       int64  `json:"id"`
+	Email    string `json:"email"`
+	Nickname string `json:"nickname"`
+	Birthday string `json:"birthday"`
+	AboutMe  string `json:"about_me"`
+	CreateAt string `json:"create_at"`
+	UpdateAt string `json:"update_at"`
 }
