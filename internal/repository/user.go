@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"github.com/huangyul/go-blog/internal/repository/cache"
 	"time"
 
 	"github.com/huangyul/go-blog/internal/domain"
@@ -19,7 +20,8 @@ type UserRepository interface {
 var _ UserRepository = (*userRepository)(nil)
 
 type userRepository struct {
-	dao dao.UserDAO
+	dao   dao.UserDAO
+	cache cache.UserCache
 }
 
 func (repo *userRepository) GetUserList(ctx context.Context, page, pageSize int) ([]domain.User, int, error) {
@@ -39,16 +41,23 @@ func (repo *userRepository) UpdateByID(ctx context.Context, user domain.User) er
 }
 
 func (repo *userRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
+	dUser, err := repo.cache.Get(ctx, id)
+	if err == nil {
+		return dUser, nil
+	}
 	u, err := repo.dao.FindByID(ctx, id)
 	if err != nil {
 		return domain.User{}, err
 	}
-	return repo.toDomain(u), nil
+	dUser = repo.toDomain(u)
+	go repo.cache.Set(ctx, dUser)
+	return dUser, nil
 }
 
-func NewUserRepository(dao dao.UserDAO) UserRepository {
+func NewUserRepository(dao dao.UserDAO, cache cache.UserCache) UserRepository {
 	return &userRepository{
-		dao: dao,
+		dao:   dao,
+		cache: cache,
 	}
 }
 

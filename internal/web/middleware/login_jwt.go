@@ -61,10 +61,10 @@ func (b *JWTLoginMiddlewareBuild) Build() gin.HandlerFunc {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		if c.UserAgent != ctx.Request.UserAgent() {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
+		//if c.UserAgent != ctx.Request.UserAgent() {
+		//	ctx.AbortWithStatus(http.StatusUnauthorized)
+		//	return
+		//}
 
 		ctx.Set("user_id", c.UserID)
 		// renewal of token validity time
