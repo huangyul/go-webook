@@ -15,12 +15,30 @@ type UserService interface {
 	UpdateUserInfo(ctx context.Context, user domain.User) error
 	GetUserInfo(ctx context.Context, id int64) (domain.User, error)
 	GetUserList(ctx context.Context, page, pageSize int) ([]domain.User, int, error)
+	SendCode(ctx context.Context, phone string) error
+	LoginSMS(ctx context.Context, phone string, code string) (domain.User, error)
 }
 
 var _ UserService = (*userService)(nil)
 
 type userService struct {
-	repo repository.UserRepository
+	repo    repository.UserRepository
+	codeSvc CodeService
+}
+
+func NewUserService(repo repository.UserRepository, codeSvc CodeService) UserService {
+	return &userService{
+		repo:    repo,
+		codeSvc: codeSvc,
+	}
+}
+
+func (svc *userService) LoginSMS(ctx context.Context, phone string, code string) (domain.User, error) {
+	return svc.repo.FindOrCreateByPhone(ctx, phone)
+}
+
+func (svc *userService) SendCode(ctx context.Context, phone string) error {
+	return svc.codeSvc.Send(ctx, "login", phone)
 }
 
 func (svc *userService) GetUserList(ctx context.Context, page, pageSize int) ([]domain.User, int, error) {
@@ -33,10 +51,6 @@ func (svc *userService) UpdateUserInfo(ctx context.Context, user domain.User) er
 
 func (svc *userService) GetUserInfo(ctx context.Context, id int64) (domain.User, error) {
 	return svc.repo.FindById(ctx, id)
-}
-
-func NewUserService(repo repository.UserRepository) UserService {
-	return &userService{repo: repo}
 }
 
 // Login

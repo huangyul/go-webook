@@ -15,6 +15,7 @@ type UserRepository interface {
 	FindById(ctx context.Context, id int64) (domain.User, error)
 	UpdateByID(ctx context.Context, user domain.User) error
 	GetUserList(ctx context.Context, page, pageSize int) ([]domain.User, int, error)
+	FindOrCreateByPhone(ctx context.Context, phone string) (domain.User, error)
 }
 
 var _ UserRepository = (*userRepository)(nil)
@@ -22,6 +23,21 @@ var _ UserRepository = (*userRepository)(nil)
 type userRepository struct {
 	dao   dao.UserDAO
 	cache cache.UserCache
+}
+
+func NewUserRepository(dao dao.UserDAO, cache cache.UserCache) UserRepository {
+	return &userRepository{
+		dao:   dao,
+		cache: cache,
+	}
+}
+
+func (repo *userRepository) FindOrCreateByPhone(ctx context.Context, phone string) (domain.User, error) {
+	dUser, err := repo.dao.FindOrCreateByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return repo.toDomain(dUser), nil
 }
 
 func (repo *userRepository) GetUserList(ctx context.Context, page, pageSize int) ([]domain.User, int, error) {
@@ -52,13 +68,6 @@ func (repo *userRepository) FindById(ctx context.Context, id int64) (domain.User
 	dUser = repo.toDomain(u)
 	go repo.cache.Set(ctx, dUser)
 	return dUser, nil
-}
-
-func NewUserRepository(dao dao.UserDAO, cache cache.UserCache) UserRepository {
-	return &userRepository{
-		dao:   dao,
-		cache: cache,
-	}
 }
 
 // FindByEmail

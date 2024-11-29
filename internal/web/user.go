@@ -2,11 +2,12 @@ package web
 
 import (
 	"errors"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/huangyul/go-blog/internal/domain"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/huangyul/go-blog/internal/domain"
 
 	"github.com/huangyul/go-blog/internal/pkg/errno"
 	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
@@ -45,6 +46,10 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/edit", h.Edit)
 	ug.GET("/profile", h.Profile)
 	ug.GET("/list", h.List)
+
+	// code
+	ug.GET("/login-sms", h.SendCode)
+	ug.POST("/login-sms", h.LoginSMS)
 }
 
 func (h *UserHandler) Signup(ctx *gin.Context) {
@@ -251,6 +256,70 @@ func (h *UserHandler) List(ctx *gin.Context) {
 	WriteSuccess(ctx, ListResp[userResp]{
 		Datas: datas,
 		Total: count,
+	})
+
+}
+
+func (h *UserHandler) SendCode(ctx *gin.Context) {
+	phone := ctx.Query("phone")
+	if phone == "" {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("phone must not be empty"))
+		return
+	}
+	err := h.svc.SendCode(ctx, phone)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(err.Error()))
+		return
+	}
+	WriteErrno(ctx, errno.ErrOK.SetMessage("code send successfully"))
+}
+
+func (h *UserHandler) LoginSMS(ctx *gin.Context) {
+	type Req struct {
+		Phone string `json:"phone_number" binding:"required"`
+		Code  string `json:"code" binding:"required"`
+	}
+	var req Req
+	if err := ctx.ShouldBind(&req); err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(validator.Translate(err)))
+		return
+	}
+	user, err := h.svc.LoginSMS(ctx, req.Phone, req.Code)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(err.Error()))
+		return
+	}
+	// set login token
+	// type 1 session
+	sess := sessions.Default(ctx)
+	sess.Set("user_id", user.ID)
+	sess.Options(sessions.Options{
+		MaxAge: 86400,
+	})
+	if err := sess.Save(); err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+	// type 2 jwt
+	c := JWTClaims{
+		UserID:    user.ID,
+		UserAgent: ctx.Request.UserAgent(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, c)
+	tokenStr, err := token.SignedString([]byte("JWT_TOKEN_KEY"))
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+	}
+
+	type LoginResp struct {
+		Token string `json:"token"`
+	}
+
+	WriteSuccess(ctx, LoginResp{
+		Token: tokenStr,
 	})
 
 }

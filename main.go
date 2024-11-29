@@ -9,6 +9,7 @@ import (
 	"github.com/huangyul/go-blog/internal/repository/cache"
 	"github.com/huangyul/go-blog/internal/repository/dao"
 	"github.com/huangyul/go-blog/internal/service"
+	"github.com/huangyul/go-blog/internal/service/sms/localstorage"
 	"github.com/huangyul/go-blog/internal/web"
 	"github.com/huangyul/go-blog/internal/web/middleware"
 	"github.com/redis/go-redis/v9"
@@ -20,11 +21,11 @@ func main() {
 
 	db := InitDB()
 
-	redis := InitRedis()
+	cmd := InitRedis()
 
 	server := InitServer()
 
-	InitUseWeb(server, db, redis)
+	InitUseWeb(server, db, cmd)
 
 	server.Run("127.0.0.1:8088")
 }
@@ -38,9 +39,11 @@ func InitDB() *gorm.DB {
 	return db
 }
 
-func InitRedis() *redis.Client {
+func InitRedis() redis.Cmdable {
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "127.0.0.1:6379",
+		Addr:     "127.0.0.1:6379",
+		DB:       0,
+		Password: "",
 	})
 	return redisClient
 }
@@ -55,16 +58,20 @@ func InitServer() *gin.Engine {
 	server.Use(sessions.Sessions("mysession", cookie.NewStore([]byte("secret"))))
 	//server.Use((middleware.LoginMiddleBuilder{}).Build())
 
-	server.Use(middleware.NewJWTLoginMiddlewareBuild().AddWhiteList("/user/login", "/user/signup").Build())
+	server.Use(middleware.NewJWTLoginMiddlewareBuild().AddWhiteList("/user/login", "/user/signup", "/user/login-sms").Build())
 
 	return server
 }
 
 func InitUseWeb(server *gin.Engine, db *gorm.DB, cmd redis.Cmdable) {
-	uDao := dao.NewUserDAO(db)
+	cCache := cache.NewRedisCodeCache(cmd)
+	cRepo := repository.NewCodeRepository(cCache)
+	cSvc := service.NewCodeService(cRepo, localstorage.NewSmsLocalStorageService())
+
+	uDao := dao.NewUserDAOGORM(db)
 	uCache := cache.NewRedisUserCache(cmd)
 	uRepo := repository.NewUserRepository(uDao, uCache)
-	uSvc := service.NewUserService(uRepo)
+	uSvc := service.NewUserService(uRepo, cSvc)
 	h := web.NewUserHandler(uSvc)
 	h.RegisterRoutes(server)
 }

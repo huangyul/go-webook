@@ -16,12 +16,34 @@ type UserDAO interface {
 	FindByID(ctx context.Context, id int64) (User, error)
 	UpdateByID(ctx context.Context, user User) error
 	GetList(ctx context.Context, page, pageSize int) ([]User, int, error)
+	FindOrCreateByPhone(ctx context.Context, phone string) (User, error)
 }
 
 var _ UserDAO = (*UserDAOGORM)(nil)
 
 type UserDAOGORM struct {
 	db *gorm.DB
+}
+
+func NewUserDAOGORM(db *gorm.DB) UserDAO {
+	return &UserDAOGORM{
+		db: db,
+	}
+}
+
+func (dao *UserDAOGORM) FindOrCreateByPhone(ctx context.Context, phone string) (User, error) {
+	var user User
+	err := dao.db.WithContext(ctx).Where("phone = ?", phone).FirstOrCreate(&user).Error
+	var v *mysql.MySQLError
+	if errors.As(err, &v) {
+		if v.Number == 1062 {
+			return User{}, errno.ErrPhoneAlreadyExist
+		}
+	}
+	if err != nil {
+		return User{}, err
+	}
+	return user, nil
 }
 
 func (dao *UserDAOGORM) GetList(ctx context.Context, page, pageSize int) ([]User, int, error) {
@@ -36,10 +58,6 @@ func (dao *UserDAOGORM) GetList(ctx context.Context, page, pageSize int) ([]User
 		return nil, 0, err
 	}
 	return users, int(count), nil
-}
-
-func NewUserDAO(db *gorm.DB) UserDAO {
-	return &UserDAOGORM{db: db}
 }
 
 // UpdateByID update by id,only can update birthday, aboutme, nickname
@@ -89,7 +107,8 @@ func (dao *UserDAOGORM) Insert(ctx context.Context, user User) error {
 	user.CreatedAt = now
 	user.UpdatedAt = now
 	err := dao.db.WithContext(ctx).Create(&user).Error
-	if e, ok := err.(*mysql.MySQLError); ok {
+	var e *mysql.MySQLError
+	if errors.As(err, &e) {
 		if e.Error() == "Error 1062: Duplicate entry" {
 			return errno.ErrEmailAlreadyExist
 		}

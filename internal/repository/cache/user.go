@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/huangyul/go-blog/internal/domain"
 	"github.com/redis/go-redis/v9"
-	"time"
 )
 
 type UserCache interface {
@@ -21,7 +22,7 @@ type RedisUserCache struct {
 	expiration time.Duration
 }
 
-func NewRedisUserCache(client redis.Cmdable) *RedisUserCache {
+func NewRedisUserCache(client redis.Cmdable) UserCache {
 	return &RedisUserCache{client: client, expiration: time.Minute * 15}
 }
 
