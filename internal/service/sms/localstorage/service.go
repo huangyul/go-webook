@@ -14,6 +14,6 @@ func NewSmsLocalStorageService() sms.SMSService {
 }
 
 func (s *SmsLocalStorageService) Send(ctx context.Context, tplId string, args []string, number ...string) error {
-	fmt.Printf("code: %v", args)
+	fmt.Printf("code: %v \r\n", args)
 	return nil
 }

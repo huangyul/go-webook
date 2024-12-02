@@ -11,10 +11,10 @@ if ttl == -1 then
     return -2
 elseif ttl == -2 or ttl < 540 then
     --- set new code
-    redis.set(key, code)
-    redis.set("EXPIRE", key, 600)
-    redis.set(cntKey, 3)
-    redis.set("EXPIRE", cntKey, 600)
+    redis.call("SET", key, code)
+    redis.call("EXPIRE", key, 600)
+    redis.call("SET", cntKey, 3)
+    redis.call("EXPIRE", cntKey, 600)
     return 0
 else
     -- send too frequent

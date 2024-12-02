@@ -6,9 +6,9 @@ local inputCode = ARGV[1]
 
 local code = redis.call("GET", key)
 
-local cnt = redis.call("GET", cntKey)
+local cnt = tonumber(redis.call("GET", cntKey))
 
-if cnt <= 0 or cnt == nil then
+if cnt == nil or cnt <= 0 then
     -- code not exist or too many validations
     return -1
 end

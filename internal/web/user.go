@@ -22,20 +22,22 @@ import (
 var (
 	emailPattern    = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 	passwordPattern = `^[a-zA-Z0-9]{6,18}$`
+	bizLogin        = "login"
 )
 
 type UserHandler struct {
 	emailRexExp    *regexp.Regexp
 	passwordRexExp *regexp.Regexp
-
-	svc service.UserService
+	svc            service.UserService
+	codeSvc        service.CodeService
 }
 
-func NewUserHandler(svc service.UserService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
 	return &UserHandler{
 		emailRexExp:    regexp.MustCompile(emailPattern, regexp.None),
 		passwordRexExp: regexp.MustCompile(passwordPattern, regexp.None),
 		svc:            svc,
+		codeSvc:        codeSvc,
 	}
 }
 
@@ -266,7 +268,7 @@ func (h *UserHandler) SendCode(ctx *gin.Context) {
 		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("phone must not be empty"))
 		return
 	}
-	err := h.svc.SendCode(ctx, phone)
+	err := h.codeSvc.Send(ctx, bizLogin, phone)
 	if err != nil {
 		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(err.Error()))
 		return
@@ -276,12 +278,17 @@ func (h *UserHandler) SendCode(ctx *gin.Context) {
 
 func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 	type Req struct {
-		Phone string `json:"phone_number" binding:"required"`
+		Phone string `json:"phone" binding:"required"`
 		Code  string `json:"code" binding:"required"`
 	}
 	var req Req
 	if err := ctx.ShouldBind(&req); err != nil {
 		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(validator.Translate(err)))
+		return
+	}
+	ok, err := h.codeSvc.Verify(ctx, bizLogin, req.Phone, req.Code)
+	if err != nil || !ok {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(err.Error()))
 		return
 	}
 	user, err := h.svc.LoginSMS(ctx, req.Phone, req.Code)

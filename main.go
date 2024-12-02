@@ -15,6 +15,10 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"log"
+	"os"
+	"time"
 )
 
 func main() {
@@ -31,7 +35,21 @@ func main() {
 }
 
 func InitDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:13306)/go_blog?charset=utf8mb4&parseTime=True&loc=Local"))
+
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+		logger.Config{
+			SlowThreshold:             time.Second, // Slow SQL threshold
+			LogLevel:                  logger.Info, // Log level
+			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
+			ParameterizedQueries:      false,       // Don't include params in the SQL log
+			Colorful:                  false,       // Disable color
+		},
+	)
+
+	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:13306)/go_blog?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{
+		Logger: newLogger,
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -71,7 +89,7 @@ func InitUseWeb(server *gin.Engine, db *gorm.DB, cmd redis.Cmdable) {
 	uDao := dao.NewUserDAOGORM(db)
 	uCache := cache.NewRedisUserCache(cmd)
 	uRepo := repository.NewUserRepository(uDao, uCache)
-	uSvc := service.NewUserService(uRepo, cSvc)
-	h := web.NewUserHandler(uSvc)
+	uSvc := service.NewUserService(uRepo)
+	h := web.NewUserHandler(uSvc, cSvc)
 	h.RegisterRoutes(server)
 }

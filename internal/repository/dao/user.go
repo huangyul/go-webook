@@ -32,8 +32,9 @@ func NewUserDAOGORM(db *gorm.DB) UserDAO {
 }
 
 func (dao *UserDAOGORM) FindOrCreateByPhone(ctx context.Context, phone string) (User, error) {
-	var user User
-	err := dao.db.WithContext(ctx).Where("phone = ?", phone).FirstOrCreate(&user).Error
+	user := User{}
+	user.Phone = phone
+	err := dao.db.WithContext(ctx).Model(&User{}).Where("phone = ?", phone).FirstOrCreate(&user).Error
 	var v *mysql.MySQLError
 	if errors.As(err, &v) {
 		if v.Number == 1062 {
@@ -94,7 +95,7 @@ func (dao *UserDAOGORM) FindByID(ctx context.Context, id int64) (User, error) {
 // FindByEmail Finds user by email
 func (dao *UserDAOGORM) FindByEmail(ctx context.Context, email string) (User, error) {
 	var user User
-	err := dao.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	err := dao.db.WithContext(ctx).Where("email = ?", &email).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return User{}, errno.ErrNotFoundUser
 	}
@@ -118,14 +119,13 @@ func (dao *UserDAOGORM) Insert(ctx context.Context, user User) error {
 
 // User user table construct
 type User struct {
-	ID       int64  `gorm:"primary_key;AUTO_INCREMENT"`
-	Password string `gorm:"size:255;not null"`
-	Email    string `gorm:"unique;size:255;not null"`
-
-	Nickname string `gorm:"type:varchar(255)"`
-	Birthday int64
-	AboutMe  string `gorm:"type:varchar(4096)"`
-
+	ID        int64   `gorm:"primary_key;AUTO_INCREMENT"`
+	Password  string  `gorm:"size:255;"`
+	Email     *string `gorm:"unique;size:255;"`
+	Phone     string
+	Nickname  string `gorm:"type:varchar(255)"`
+	Birthday  int64
+	AboutMe   string `gorm:"type:varchar(4096)"`
 	CreatedAt int64
 	UpdatedAt int64
 }

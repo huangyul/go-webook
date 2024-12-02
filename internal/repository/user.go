@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"github.com/huangyul/go-blog/internal/repository/cache"
+	"github.com/huangyul/go-blog/pkg/utils"
 	"time"
 
 	"github.com/huangyul/go-blog/internal/domain"
@@ -87,9 +88,10 @@ func (repo *userRepository) Insert(ctx context.Context, user domain.User) error 
 func (repo *userRepository) toDomain(u dao.User) domain.User {
 	return domain.User{
 		ID:        u.ID,
-		Email:     u.Email,
+		Email:     utils.PtrToString(u.Email),
 		Password:  u.Password,
 		AboutMe:   u.AboutMe,
+		Phone:     u.Phone,
 		Birthday:  time.UnixMilli(u.Birthday),
 		Nickname:  u.Nickname,
 		CreatedAt: time.UnixMilli(u.CreatedAt),
@@ -100,9 +102,10 @@ func (repo *userRepository) toDomain(u dao.User) domain.User {
 func (repo *userRepository) toDao(u domain.User) dao.User {
 	return dao.User{
 		ID:        u.ID,
-		Email:     u.Email,
+		Email:     &u.Email,
 		Password:  u.Password,
 		AboutMe:   u.AboutMe,
+		Phone:     u.Phone,
 		Birthday:  u.Birthday.UnixMilli(),
 		Nickname:  u.Nickname,
 		CreatedAt: u.CreatedAt.UnixMilli(),
