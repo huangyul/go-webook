@@ -32,8 +32,11 @@ func NewUserDAOGORM(db *gorm.DB) UserDAO {
 }
 
 func (dao *UserDAOGORM) FindOrCreateByPhone(ctx context.Context, phone string) (User, error) {
+	now := time.Now().UnixMilli()
 	user := User{}
 	user.Phone = phone
+	user.CreatedAt = now
+	user.UpdatedAt = now
 	err := dao.db.WithContext(ctx).Model(&User{}).Where("phone = ?", phone).FirstOrCreate(&user).Error
 	var v *mysql.MySQLError
 	if errors.As(err, &v) {

@@ -213,6 +213,7 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 		Email:    u.Email,
 		Nickname: u.Nickname,
 		Birthday: u.Birthday.Format(time.DateOnly),
+		Phone:    u.Phone,
 		AboutMe:  u.AboutMe,
 		CreateAt: u.CreatedAt.Format(time.DateOnly),
 		UpdateAt: u.UpdatedAt.Format(time.DateOnly),
@@ -343,6 +344,7 @@ type userResp struct {
 	Nickname string `json:"nickname"`
 	Birthday string `json:"birthday"`
 	AboutMe  string `json:"about_me"`
+	Phone    string `json:"phone"`
 	CreateAt string `json:"create_at"`
 	UpdateAt string `json:"update_at"`
 }
