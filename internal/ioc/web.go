@@ -4,6 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/huangyul/go-blog/internal/web"
 	"github.com/huangyul/go-blog/internal/web/middleware"
+	"github.com/huangyul/go-blog/pkg/ginx/middleware/ratelimit"
+	"github.com/huangyul/go-blog/pkg/limiter"
+	"github.com/redis/go-redis/v9"
+	"time"
 )
 
 func InitServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine {
@@ -13,8 +17,9 @@ func InitServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine {
 	return server
 }
 
-func InitGinMiddlewares() []gin.HandlerFunc {
+func InitGinMiddlewares(cmd redis.Cmdable) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewJWTLoginMiddlewareBuild().AddWhiteList("/user/login", "/user/signup", "/user/login-sms").Build(),
+		ratelimit.NewBuilder(limiter.NewRedisSlideWindowRedis(cmd, time.Minute*10, 10)).Build(),
 	}
 }

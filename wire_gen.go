@@ -17,17 +17,13 @@ import (
 	"github.com/huangyul/go-blog/internal/web"
 )
 
-import (
-	_ "github.com/huangyul/go-blog/internal/pkg/ginx/validator"
-)
-
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {
-	v := ioc.InitGinMiddlewares()
+	cmdable := ioc.InitRedis()
+	v := ioc.InitGinMiddlewares(cmdable)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAOGORM(db)
-	cmdable := ioc.InitRedis()
 	userCache := cache.NewRedisUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDAO, userCache)
 	userService := service.NewUserService(userRepository)

@@ -121,17 +121,17 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	// set login token
+	// set login tokens
 	// type 1 session
-	sess := sessions.Default(ctx)
-	sess.Set("user_id", user.ID)
-	sess.Options(sessions.Options{
-		MaxAge: 86400,
-	})
-	if err := sess.Save(); err != nil {
-		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
-		return
-	}
+	//sess := sessions.Default(ctx)
+	//sess.Set("user_id", user.ID)
+	//sess.Options(sessions.Options{
+	//	MaxAge: 86400,
+	//})
+	//if err := sess.Save(); err != nil {
+	//	WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+	//	return
+	//}
 	// type 2 jwt
 	c := JWTClaims{
 		UserID:    user.ID,
