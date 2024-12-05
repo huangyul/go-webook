@@ -28,4 +28,4 @@ go.work.sum
 .idea
 
 temp
-tmp
+tmp/
