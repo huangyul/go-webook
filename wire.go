@@ -11,6 +11,7 @@ import (
 	"github.com/huangyul/go-blog/internal/repository/dao"
 	"github.com/huangyul/go-blog/internal/service"
 	"github.com/huangyul/go-blog/internal/web"
+	ginxjwt "github.com/huangyul/go-blog/pkg/ginx/jwt"
 )
 
 var (
@@ -36,6 +37,8 @@ func InitWebServer() *gin.Engine {
 
 		CodeSet,
 		UserSet,
+
+		ginxjwt.NewJWT,
 
 		ioc.InitSMSService,
 		ioc.InitGinMiddlewares,

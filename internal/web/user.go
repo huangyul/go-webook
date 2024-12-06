@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/huangyul/go-blog/internal/domain"
+	ginxjwt "github.com/huangyul/go-blog/pkg/ginx/jwt"
 
 	"github.com/huangyul/go-blog/internal/pkg/errno"
 	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
@@ -30,14 +30,16 @@ type UserHandler struct {
 	passwordRexExp *regexp.Regexp
 	svc            service.UserService
 	codeSvc        service.CodeService
+	jwt            ginxjwt.JWT
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, jwt ginxjwt.JWT) *UserHandler {
 	return &UserHandler{
 		emailRexExp:    regexp.MustCompile(emailPattern, regexp.None),
 		passwordRexExp: regexp.MustCompile(passwordPattern, regexp.None),
 		svc:            svc,
 		codeSvc:        codeSvc,
+		jwt:            jwt,
 	}
 }
 
@@ -45,6 +47,8 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/user")
 	ug.POST("/signup", h.Signup)
 	ug.POST("/login", h.Login)
+	ug.GET("/logout", h.Logout)
+	ug.GET("/refresh-token", h.RefreshToken)
 	ug.POST("/edit", h.Edit)
 	ug.GET("/profile", h.Profile)
 	ug.GET("/list", h.List)
@@ -133,25 +137,19 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	//	return
 	//}
 	// type 2 jwt
-	c := JWTClaims{
-		UserID:    user.ID,
-		UserAgent: ctx.Request.UserAgent(),
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, c)
-	tokenStr, err := token.SignedString([]byte("JWT_TOKEN_KEY"))
+	token, reToken, err := h.jwt.GenToken(ctx, user.ID)
 	if err != nil {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 	}
 
 	type LoginResp struct {
-		Token string `json:"token"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	WriteSuccess(ctx, LoginResp{
-		Token: tokenStr,
+		Token:        token,
+		RefreshToken: reToken,
 	})
 }
 
@@ -309,33 +307,39 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 		return
 	}
 	// type 2 jwt
-	c := JWTClaims{
-		UserID:    user.ID,
-		UserAgent: ctx.Request.UserAgent(),
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, c)
-	tokenStr, err := token.SignedString([]byte("JWT_TOKEN_KEY"))
+	token, reToken, err := h.jwt.GenToken(ctx, user.ID)
 	if err != nil {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 	}
 
 	type LoginResp struct {
-		Token string `json:"token"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	WriteSuccess(ctx, LoginResp{
-		Token: tokenStr,
+		Token:        token,
+		RefreshToken: reToken,
 	})
 
 }
 
-type JWTClaims struct {
-	jwt.RegisteredClaims
-	UserID    int64
-	UserAgent string
+func (h *UserHandler) Logout(ctx *gin.Context) {
+	_ = h.jwt.ClearToken(ctx)
+	WriteSuccess(ctx, "logout successfully")
+}
+
+func (h *UserHandler) RefreshToken(ctx *gin.Context) {
+	token, err := h.jwt.RefreshToken(ctx)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+	WriteSuccess(ctx, struct {
+		Token string `json:"token"`
+	}{
+		Token: token,
+	})
 }
 
 type userResp struct {

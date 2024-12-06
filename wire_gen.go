@@ -15,13 +15,15 @@ import (
 	"github.com/huangyul/go-blog/internal/repository/dao"
 	"github.com/huangyul/go-blog/internal/service"
 	"github.com/huangyul/go-blog/internal/web"
+	"github.com/huangyul/go-blog/pkg/ginx/jwt"
 )
 
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
-	v := ioc.InitGinMiddlewares(cmdable)
+	jwt := ginxjwt.NewJWT(cmdable)
+	v := ioc.InitGinMiddlewares(cmdable, jwt)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAOGORM(db)
 	userCache := cache.NewRedisUserCache(cmdable)
@@ -31,7 +33,7 @@ func InitWebServer() *gin.Engine {
 	codeRepository := repository.NewCodeRepository(codeCache)
 	smsService := ioc.InitSMSService(cmdable)
 	codeService := service.NewCodeService(codeRepository, smsService)
-	userHandler := web.NewUserHandler(userService, codeService)
+	userHandler := web.NewUserHandler(userService, codeService, jwt)
 	engine := ioc.InitServer(v, userHandler)
 	return engine
 }
