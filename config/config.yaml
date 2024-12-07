@@ -1,0 +1,13 @@
+server:
+  port: 8088
+
+#  "root:root@tcp(127.0.0.1:13306)/go_blog?charset=utf8mb4&parseTime=True&loc=Local"
+db:
+  host: "127.0.0.1"
+  port: 13306
+  database: "go_blog"
+  username: "root"
+  password: "root"
+
+redis:
+  addr: "127.0.0.1:6379"
