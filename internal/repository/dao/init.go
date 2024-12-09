@@ -6,5 +6,5 @@ import "gorm.io/gorm"
 //
 // A bad practice
 func InitTable(db *gorm.DB) {
-	db.AutoMigrate(&User{})
+	db.AutoMigrate(&User{}, &Article{}, &PublishedArticle{})
 }

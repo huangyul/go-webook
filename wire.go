@@ -27,6 +27,12 @@ var (
 		cache.NewRedisCodeCache,
 		service.NewCodeService,
 	)
+	ArticleSet = wire.NewSet(
+		dao.NewArticleDao,
+		repository.NewArticleRepository,
+		service.NewArticleService,
+		web.NewArticleHandler,
+	)
 )
 
 func InitWebServer() *gin.Engine {
@@ -37,6 +43,7 @@ func InitWebServer() *gin.Engine {
 
 		CodeSet,
 		UserSet,
+		ArticleSet,
 
 		ginxjwt.NewJWT,
 
