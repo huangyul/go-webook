@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"github.com/huangyul/go-blog/internal/domain"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"
@@ -11,6 +12,7 @@ type ArticleDao interface {
 	Insert(ctx context.Context, art Article) (int64, error)
 	UpdateByID(ctx context.Context, art Article) error
 	Sync(ctx context.Context, art Article) (int64, error)
+	SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error
 }
 
 var _ ArticleDao = (*GormArticleDao)(nil)
@@ -21,6 +23,26 @@ type GormArticleDao struct {
 
 func NewArticleDao(db *gorm.DB) ArticleDao {
 	return &GormArticleDao{db: db}
+}
+
+func (dao *GormArticleDao) SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error {
+	now := time.Now().UnixMilli()
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&Article{}).Where("id = ? AND author_id = ?", id, uid).Updates(map[string]interface{}{
+			"status":     status,
+			"updated_at": now,
+		})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return tx.Model(&PublishedArticle{}).Where("id = ?", id).Updates(map[string]interface{}{
+			"status":     status,
+			"updated_at": now,
+		}).Error
+	})
 }
 
 func (dao *GormArticleDao) Sync(ctx context.Context, art Article) (int64, error) {
@@ -47,6 +69,7 @@ func (dao *GormArticleDao) Sync(ctx context.Context, art Article) (int64, error)
 			DoUpdates: clause.Assignments(map[string]interface{}{
 				"title":      pubArt.Title,
 				"content":    pubArt.Content,
+				"status":     pubArt.Status,
 				"updated_at": pubArt.UpdatedAt,
 			}),
 		}).Create(pubArt).Error
@@ -59,6 +82,7 @@ func (dao *GormArticleDao) UpdateByID(ctx context.Context, art Article) error {
 	res := dao.db.WithContext(ctx).Model(&art).Where("id = ? AND author_id = ?", art.ID, art.AuthorID).Updates(map[string]interface{}{
 		"title":      art.Title,
 		"content":    art.Content,
+		"status":     art.Status,
 		"updated_at": now,
 	})
 	if res.Error != nil {
@@ -83,6 +107,7 @@ type Article struct {
 	Title     string `gorm:"type:varchar(4096);"`
 	Content   string `gorm:"type:text;"`
 	AuthorID  int64  `gorm:"index"`
+	Status    uint8
 	CreatedAt int64
 	UpdatedAt int64
 }

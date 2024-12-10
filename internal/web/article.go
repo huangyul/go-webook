@@ -6,6 +6,7 @@ import (
 	"github.com/huangyul/go-blog/internal/pkg/errno"
 	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
 	"github.com/huangyul/go-blog/internal/service"
+	"strconv"
 )
 
 type ArticleHandler struct {
@@ -22,6 +23,7 @@ func (h *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 	ug := g.Group("/article")
 	ug.POST("/edit", h.Edit)
 	ug.POST("/publish", h.Publish)
+	ug.GET("/withdraw/:id", h.Withdraw)
 }
 
 func (h *ArticleHandler) Edit(ctx *gin.Context) {
@@ -77,4 +79,20 @@ func (h *ArticleHandler) Publish(ctx *gin.Context) {
 		return
 	}
 	WriteSuccess(ctx, gin.H{"id": id})
+}
+
+func (h *ArticleHandler) Withdraw(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("id illegal"))
+		return
+	}
+	userId := ctx.MustGet("user_id").(int64)
+	err = h.svc.Withdraw(ctx, userId, id)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+	WriteSuccess(ctx, nil)
 }

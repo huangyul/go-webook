@@ -22,6 +22,6 @@ func InitServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler, artHdl *web.Ar
 func InitGinMiddlewares(cmd redis.Cmdable, jwt ginxjwt.JWT) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewJWTLoginMiddlewareBuild(jwt).AddWhiteList("/user/login", "/user/signup", "/user/login-sms").Build(),
-		ratelimit.NewBuilder(limiter.NewRedisSlideWindowRedis(cmd, time.Minute*10, 10)).Build(),
+		ratelimit.NewBuilder(limiter.NewRedisSlideWindowRedis(cmd, time.Minute*1, 100)).Build(),
 	}
 }
