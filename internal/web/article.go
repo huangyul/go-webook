@@ -26,13 +26,15 @@ func (h *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 	ug.GET("/withdraw/:id", h.Withdraw)
 }
 
+type ArticleEditReq struct {
+	ID      int64  `json:"id"`
+	Title   string `json:"title" binding:"required"`
+	Content string `json:"content" binding:"required"`
+}
+
 func (h *ArticleHandler) Edit(ctx *gin.Context) {
-	type Req struct {
-		ID      int64  `json:"id"`
-		Title   string `json:"title" binding:"required"`
-		Content string `json:"content" binding:"required"`
-	}
-	var req Req
+
+	var req ArticleEditReq
 	if err := ctx.ShouldBind(&req); err != nil {
 		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(validator.Translate(err)))
 		return
