@@ -13,6 +13,8 @@ type ArticleDao interface {
 	UpdateByID(ctx context.Context, art Article) error
 	Sync(ctx context.Context, art Article) (int64, error)
 	SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error
+	ListByAuthor(ctx context.Context, uid int64, page int64, pageSize int64) ([]Article, error)
+	GetById(ctx context.Context, uid int64, id int64) (Article, error)
 }
 
 var _ ArticleDao = (*GormArticleDao)(nil)
@@ -23,6 +25,24 @@ type GormArticleDao struct {
 
 func NewArticleDao(db *gorm.DB) ArticleDao {
 	return &GormArticleDao{db: db}
+}
+
+func (dao *GormArticleDao) ListByAuthor(ctx context.Context, uid int64, page int64, pageSize int64) ([]Article, error) {
+	var res []Article
+	err := dao.db.WithContext(ctx).Where("author_id = ?", uid).Offset(int((page - 1) * pageSize)).Limit(int(pageSize)).Find(&res).Error
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (dao *GormArticleDao) GetById(ctx context.Context, uid int64, id int64) (Article, error) {
+	var res Article
+	err := dao.db.WithContext(ctx).Where("id = ? AND author_id = ?", id, uid).Find(&res).Error
+	if err != nil {
+		return Article{}, err
+	}
+	return res, nil
 }
 
 func (dao *GormArticleDao) SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error {

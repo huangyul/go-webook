@@ -24,6 +24,8 @@ func (h *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 	ug.POST("/edit", h.Edit)
 	ug.POST("/publish", h.Publish)
 	ug.GET("/withdraw/:id", h.Withdraw)
+	ug.POST("/list", h.List)
+	ug.GET("/detail/:id", h.Detail)
 }
 
 type ArticleEditReq struct {
@@ -97,4 +99,37 @@ func (h *ArticleHandler) Withdraw(ctx *gin.Context) {
 		return
 	}
 	WriteSuccess(ctx, nil)
+}
+
+func (h *ArticleHandler) List(ctx *gin.Context) {
+	var req Page
+	if err := ctx.ShouldBind(&req); err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(validator.Translate(err)))
+		return
+	}
+	req.SetDefault()
+
+	userId := ctx.MustGet("user_id").(int64)
+	data, err := h.svc.List(ctx, userId, req.Page, req.PageSize)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+	WriteSuccess(ctx, gin.H{"data": data})
+}
+
+func (h *ArticleHandler) Detail(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("id illegal"))
+		return
+	}
+	userId := ctx.MustGet("user_id").(int64)
+	art, err := h.svc.Detail(ctx, userId, id)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+	WriteSuccess(ctx, gin.H{"data": art})
 }

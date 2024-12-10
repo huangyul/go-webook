@@ -12,6 +12,14 @@ type Article struct {
 	Author
 }
 
+func (a Article) Abstract() string {
+	str := []rune(a.Content)
+	if len(str) > 128 {
+		str = str[:128]
+	}
+	return string(str)
+}
+
 type Author struct {
 	ID   int64
 	Name string

@@ -10,6 +10,8 @@ type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
 	Publish(ctx context.Context, art domain.Article) (int64, error)
 	Withdraw(ctx context.Context, uid, id int64) error
+	List(ctx context.Context, uid int64, page int64, pageSize int64) ([]domain.Article, error)
+	Detail(ctx context.Context, uid int64, id int64) (domain.Article, error)
 }
 
 var _ ArticleService = (*articleService)(nil)
@@ -22,6 +24,10 @@ func NewArticleService(repo repository.ArticleRepository) ArticleService {
 	return &articleService{
 		repo: repo,
 	}
+}
+
+func (svc *articleService) Detail(ctx context.Context, uid int64, id int64) (domain.Article, error) {
+	return svc.repo.GetById(ctx, uid, id)
 }
 
 func (svc *articleService) Withdraw(ctx context.Context, uid int64, id int64) error {
@@ -41,4 +47,8 @@ func (svc *articleService) Save(ctx context.Context, art domain.Article) (int64,
 func (svc *articleService) Publish(ctx context.Context, art domain.Article) (int64, error) {
 	art.Status = domain.ArticleStatusPublished
 	return svc.repo.Sync(ctx, art)
+}
+
+func (svc *articleService) List(ctx context.Context, uid int64, page int64, pageSize int64) ([]domain.Article, error) {
+	return svc.repo.ListByAuthor(ctx, uid, page, pageSize)
 }

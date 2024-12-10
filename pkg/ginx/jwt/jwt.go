@@ -28,6 +28,7 @@ var _ JWT = (*Handler)(nil)
 type Handler struct {
 	client     redis.Cmdable
 	jwtMethod  jwt.SigningMethod
+	tDuration  time.Duration
 	rfDuration time.Duration
 }
 
@@ -35,6 +36,7 @@ func NewJWT(client redis.Cmdable) JWT {
 	return &Handler{
 		client:     client,
 		jwtMethod:  jwt.SigningMethodHS512,
+		tDuration:  time.Hour * 24,
 		rfDuration: time.Hour * 24 * 7,
 	}
 }
@@ -42,6 +44,7 @@ func NewJWT(client redis.Cmdable) JWT {
 type JwtClaims struct {
 	Uid  int64
 	ssid string // the id stored in redis
+
 	jwt.RegisteredClaims
 }
 
@@ -72,7 +75,7 @@ func (h *Handler) RefreshToken(ctx *gin.Context) (string, error) {
 		Uid:  c.Uid,
 		ssid: c.ssid,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(h.tDuration)),
 		},
 	}
 	tokenStr, err := jwt.NewWithClaims(h.jwtMethod, jc).SignedString(JWTKey)
