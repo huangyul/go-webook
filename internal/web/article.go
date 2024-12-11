@@ -32,6 +32,7 @@ func (h *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 	ug.GET("/detail/:id", h.Detail)
 	pg := ug.Group("/pub")
 	pg.GET("/detail/:id", h.PubDetail)
+	pg.POST("/like/:id", h.Like)
 }
 
 type ArticleEditReq struct {
@@ -157,4 +158,33 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 		h.interSvc.IncrReadCnt(ctx, art.ID, biz)
 	}()
 	WriteSuccess(ctx, gin.H{"data": art})
+}
+
+func (h *ArticleHandler) Like(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("id illegal"))
+		return
+	}
+	type Req struct {
+		Like bool `json:"like" binding:"required"`
+	}
+	var req Req
+	if err := ctx.ShouldBind(&req); err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(validator.Translate(err)))
+		return
+	}
+	userId := ctx.MustGet("user_id").(int64)
+	var er error
+	if req.Like {
+		er = h.interSvc.Like(ctx, userId, id, biz)
+	} else {
+		er = h.interSvc.CancelLike(ctx, userId, id, biz)
+	}
+	if er != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(er.Error()))
+		return
+	}
+	WriteSuccess(ctx, nil)
 }

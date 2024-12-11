@@ -92,7 +92,7 @@ func (h *Handler) GenToken(ctx *gin.Context, uid int64) (string, string, error) 
 		Uid:  uid,
 		ssid: ssid,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(h.tDuration)),
 		},
 	}
 	tokenStr, err := jwt.NewWithClaims(h.jwtMethod, tokenClaims).SignedString(JWTKey)
@@ -102,7 +102,7 @@ func (h *Handler) GenToken(ctx *gin.Context, uid int64) (string, string, error) 
 	refreshTokenClaims := &JwtClaims{
 		ssid: ssid,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 7)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(h.rfDuration)),
 		},
 	}
 	refreshTokenStr, err := jwt.NewWithClaims(h.jwtMethod, refreshTokenClaims).SignedString(RfJWTKey)

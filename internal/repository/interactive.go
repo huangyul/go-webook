@@ -8,6 +8,8 @@ import (
 
 type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, bizID int64, biz string) error
+	IncrLikeCnt(ctx context.Context, userID, bizID int64, biz string) error
+	DecrLikeCnt(ctx context.Context, userID, bizID int64, biz string) error
 }
 
 var _ InteractiveRepository = (*interactiveRepository)(nil)
@@ -15,6 +17,22 @@ var _ InteractiveRepository = (*interactiveRepository)(nil)
 type interactiveRepository struct {
 	cache cache.InteractiveCache
 	dao   dao.InteractiveDao
+}
+
+func (repo *interactiveRepository) IncrLikeCnt(ctx context.Context, userID, bizID int64, biz string) error {
+	err := repo.dao.InsertLikeBiz(ctx, userID, bizID, biz)
+	if err != nil {
+		return err
+	}
+	return repo.cache.IncrLikeCntIfPresent(ctx, bizID, biz)
+}
+
+func (repo *interactiveRepository) DecrLikeCnt(ctx context.Context, userID, bizID int64, biz string) error {
+	err := repo.dao.DeleteLikeBiz(ctx, userID, bizID, biz)
+	if err != nil {
+		return err
+	}
+	return repo.cache.DecrLikeCntIfPresent(ctx, bizID, biz)
 }
 
 func NewInteractiveRepository(cache cache.InteractiveCache, dao dao.InteractiveDao) InteractiveRepository {
