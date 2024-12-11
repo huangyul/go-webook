@@ -34,6 +34,12 @@ var (
 		service.NewArticleService,
 		web.NewArticleHandler,
 	)
+	InteractiveSet = wire.NewSet(
+		dao.NewInteractiveDao,
+		cache.NewInteractiveCache,
+		repository.NewInteractiveRepository,
+		service.NewInteractiveService,
+	)
 )
 
 func InitWebServer() *gin.Engine {
@@ -45,6 +51,7 @@ func InitWebServer() *gin.Engine {
 		CodeSet,
 		UserSet,
 		ArticleSet,
+		InteractiveSet,
 
 		ginxjwt.NewJWT,
 

@@ -38,7 +38,11 @@ func InitWebServer() *gin.Engine {
 	articleCache := cache.NewRedisArticleCache(cmdable)
 	articleRepository := repository.NewArticleRepository(articleDao, articleCache)
 	articleService := service.NewArticleService(articleRepository, userRepository)
-	articleHandler := web.NewArticleHandler(articleService)
+	interactiveCache := cache.NewInteractiveCache(cmdable)
+	interactiveDao := dao.NewInteractiveDao(db)
+	interactiveRepository := repository.NewInteractiveRepository(interactiveCache, interactiveDao)
+	interactiveService := service.NewInteractiveService(interactiveRepository)
+	articleHandler := web.NewArticleHandler(articleService, interactiveService)
 	engine := ioc.InitServer(v, userHandler, articleHandler)
 	return engine
 }
@@ -46,7 +50,8 @@ func InitWebServer() *gin.Engine {
 // wire.go:
 
 var (
-	UserSet    = wire.NewSet(dao.NewUserDAOGORM, cache.NewRedisUserCache, repository.NewUserRepository, service.NewUserService, web.NewUserHandler)
-	CodeSet    = wire.NewSet(repository.NewCodeRepository, cache.NewRedisCodeCache, service.NewCodeService)
-	ArticleSet = wire.NewSet(dao.NewArticleDao, cache.NewRedisArticleCache, repository.NewArticleRepository, service.NewArticleService, web.NewArticleHandler)
+	UserSet        = wire.NewSet(dao.NewUserDAOGORM, cache.NewRedisUserCache, repository.NewUserRepository, service.NewUserService, web.NewUserHandler)
+	CodeSet        = wire.NewSet(repository.NewCodeRepository, cache.NewRedisCodeCache, service.NewCodeService)
+	ArticleSet     = wire.NewSet(dao.NewArticleDao, cache.NewRedisArticleCache, repository.NewArticleRepository, service.NewArticleService, web.NewArticleHandler)
+	InteractiveSet = wire.NewSet(dao.NewInteractiveDao, cache.NewInteractiveCache, repository.NewInteractiveRepository, service.NewInteractiveService)
 )

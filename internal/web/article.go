@@ -9,13 +9,17 @@ import (
 	"strconv"
 )
 
+const biz = "article"
+
 type ArticleHandler struct {
-	svc service.ArticleService
+	svc      service.ArticleService
+	interSvc service.InteractiveService
 }
 
-func NewArticleHandler(svc service.ArticleService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService) *ArticleHandler {
 	return &ArticleHandler{
-		svc: svc,
+		svc:      svc,
+		interSvc: interSvc,
 	}
 }
 
@@ -149,5 +153,8 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return
 	}
+	go func() {
+		h.interSvc.IncrReadCnt(ctx, art.ID, biz)
+	}()
 	WriteSuccess(ctx, gin.H{"data": art})
 }
