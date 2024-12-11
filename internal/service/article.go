@@ -12,22 +12,47 @@ type ArticleService interface {
 	Withdraw(ctx context.Context, uid, id int64) error
 	List(ctx context.Context, uid int64, page int64, pageSize int64) ([]domain.Article, error)
 	Detail(ctx context.Context, uid int64, id int64) (domain.Article, error)
+	PubDetail(ctx context.Context, uid int64, id int64) (domain.Article, error)
 }
 
 var _ ArticleService = (*articleService)(nil)
 
 type articleService struct {
-	repo repository.ArticleRepository
+	repo     repository.ArticleRepository
+	userRepo repository.UserRepository
 }
 
-func NewArticleService(repo repository.ArticleRepository) ArticleService {
+func NewArticleService(repo repository.ArticleRepository, userRepo repository.UserRepository) ArticleService {
 	return &articleService{
-		repo: repo,
+		repo:     repo,
+		userRepo: userRepo,
 	}
 }
 
+func (svc *articleService) PubDetail(ctx context.Context, uid int64, id int64) (domain.Article, error) {
+	art, err := svc.repo.GetPubById(ctx, uid, id)
+	if err != nil {
+		return domain.Article{}, err
+	}
+	user, err := svc.userRepo.FindById(ctx, uid)
+	if err != nil {
+		return domain.Article{}, err
+	}
+	art.Author.Name = user.Nickname
+	return art, nil
+}
+
 func (svc *articleService) Detail(ctx context.Context, uid int64, id int64) (domain.Article, error) {
-	return svc.repo.GetById(ctx, uid, id)
+	art, err := svc.repo.GetById(ctx, uid, id)
+	if err != nil {
+		return domain.Article{}, err
+	}
+	user, err := svc.userRepo.FindById(ctx, uid)
+	if err != nil {
+		return domain.Article{}, err
+	}
+	art.Author.Name = user.Nickname
+	return art, nil
 }
 
 func (svc *articleService) Withdraw(ctx context.Context, uid int64, id int64) error {

@@ -26,6 +26,8 @@ func (h *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 	ug.GET("/withdraw/:id", h.Withdraw)
 	ug.POST("/list", h.List)
 	ug.GET("/detail/:id", h.Detail)
+	pg := ug.Group("/pub")
+	pg.GET("/detail/:id", h.PubDetail)
 }
 
 type ArticleEditReq struct {
@@ -127,6 +129,22 @@ func (h *ArticleHandler) Detail(ctx *gin.Context) {
 	}
 	userId := ctx.MustGet("user_id").(int64)
 	art, err := h.svc.Detail(ctx, userId, id)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+	WriteSuccess(ctx, gin.H{"data": art})
+}
+
+func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage("id illegal"))
+		return
+	}
+	userId := ctx.MustGet("user_id").(int64)
+	art, err := h.svc.PubDetail(ctx, userId, id)
 	if err != nil {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return

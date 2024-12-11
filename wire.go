@@ -29,6 +29,7 @@ var (
 	)
 	ArticleSet = wire.NewSet(
 		dao.NewArticleDao,
+		cache.NewRedisArticleCache,
 		repository.NewArticleRepository,
 		service.NewArticleService,
 		web.NewArticleHandler,

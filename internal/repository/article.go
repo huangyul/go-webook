@@ -15,6 +15,7 @@ type ArticleRepository interface {
 	SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error
 	ListByAuthor(ctx context.Context, uid int64, page int64, pageSize int64) ([]domain.Article, error)
 	GetById(ctx context.Context, uid int64, id int64) (domain.Article, error)
+	GetPubById(ctx context.Context, uid int64, id int64) (domain.Article, error)
 }
 
 var _ ArticleRepository = (*articleRepository)(nil)
@@ -28,6 +29,26 @@ func NewArticleRepository(dao dao.ArticleDao, cache cache.ArticleCache) ArticleR
 	return &articleRepository{dao: dao, cache: cache}
 }
 
+func (repo *articleRepository) GetPubById(ctx context.Context, uid int64, id int64) (domain.Article, error) {
+	dart, err := repo.cache.GetPubDetail(ctx, uid, id)
+	if err == nil {
+		return dart, err
+	}
+	art, err := repo.dao.GetPubById(ctx, uid, id)
+	if err != nil {
+		return domain.Article{}, err
+	}
+	dart = repo.toDomain(dao.Article(art))
+
+	go func() {
+		ct, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = repo.cache.SetPubDetail(ct, uid, id, dart)
+	}()
+
+	return dart, nil
+}
+
 func (repo *articleRepository) GetById(ctx context.Context, uid int64, id int64) (domain.Article, error) {
 	dart, err := repo.cache.GetDetail(ctx, uid, id)
 	if err == nil {
@@ -37,11 +58,18 @@ func (repo *articleRepository) GetById(ctx context.Context, uid int64, id int64)
 	if err != nil {
 		return domain.Article{}, err
 	}
-	return repo.toDomain(art), nil
+	dart = repo.toDomain(art)
+	go func() {
+		ct, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		defer cancel()
+		repo.cache.SetDetail(ct, uid, id, dart)
+
+	}()
+	return dart, nil
 }
 
 func (repo *articleRepository) SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error {
-	return repo.dao.SyncStatus(ctx, uid, id, status)
+	return repo.dao.SyncStatus(ctx, uid, id, uint8(status))
 }
 
 func (repo *articleRepository) Create(ctx context.Context, art domain.Article) (int64, error) {

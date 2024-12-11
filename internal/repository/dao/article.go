@@ -2,7 +2,6 @@ package dao
 
 import (
 	"context"
-	"github.com/huangyul/go-blog/internal/domain"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"
@@ -12,9 +11,10 @@ type ArticleDao interface {
 	Insert(ctx context.Context, art Article) (int64, error)
 	UpdateByID(ctx context.Context, art Article) error
 	Sync(ctx context.Context, art Article) (int64, error)
-	SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error
+	SyncStatus(ctx context.Context, uid int64, id int64, status uint8) error
 	ListByAuthor(ctx context.Context, uid int64, page int64, pageSize int64) ([]Article, error)
 	GetById(ctx context.Context, uid int64, id int64) (Article, error)
+	GetPubById(ctx context.Context, uid int64, id int64) (PublishedArticle, error)
 }
 
 var _ ArticleDao = (*GormArticleDao)(nil)
@@ -25,6 +25,15 @@ type GormArticleDao struct {
 
 func NewArticleDao(db *gorm.DB) ArticleDao {
 	return &GormArticleDao{db: db}
+}
+
+func (dao *GormArticleDao) GetPubById(ctx context.Context, uid int64, id int64) (PublishedArticle, error) {
+	var art PublishedArticle
+	err := dao.db.WithContext(ctx).Where("id = ? AND author_id = ?", id, uid).First(&art).Error
+	if err != nil {
+		return PublishedArticle{}, err
+	}
+	return art, nil
 }
 
 func (dao *GormArticleDao) ListByAuthor(ctx context.Context, uid int64, page int64, pageSize int64) ([]Article, error) {
@@ -45,7 +54,7 @@ func (dao *GormArticleDao) GetById(ctx context.Context, uid int64, id int64) (Ar
 	return res, nil
 }
 
-func (dao *GormArticleDao) SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error {
+func (dao *GormArticleDao) SyncStatus(ctx context.Context, uid int64, id int64, status uint8) error {
 	now := time.Now().UnixMilli()
 	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&Article{}).Where("id = ? AND author_id = ?", id, uid).Updates(map[string]interface{}{

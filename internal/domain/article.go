@@ -9,7 +9,7 @@ type Article struct {
 	Status    uint8
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	Author
+	Author    Author
 }
 
 func (a Article) Abstract() string {
