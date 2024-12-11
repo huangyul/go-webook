@@ -6,6 +6,7 @@ import (
 	"github.com/huangyul/go-blog/internal/repository/cache"
 )
 
+//go:generate mockgen -source=./code.go -package=repomocks -destination=./mocks/code_repo_mock.go CodeRepository
 type CodeRepository interface {
 	Set(ctx context.Context, biz, phone, code string) error
 	Verify(ctx context.Context, biz, phone, code string) (bool, error)

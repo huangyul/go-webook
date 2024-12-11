@@ -10,6 +10,7 @@ import (
 	"github.com/huangyul/go-blog/internal/repository/dao"
 )
 
+//go:generate mockgen -source=./user.go -package=repomocks -destination=./mocks/user_repo_mock.go UserRepository
 type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	Insert(ctx context.Context, user domain.User) error

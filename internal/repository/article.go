@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+//go:generate mockgen -source=./article.cgo -package=repomocks -destination=./mocks/article_repo_mock.go ArticleRepository
 type ArticleRepository interface {
 	Create(ctx context.Context, art domain.Article) (int64, error)
 	Update(ctx context.Context, art domain.Article) error
