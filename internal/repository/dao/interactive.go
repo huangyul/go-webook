@@ -11,6 +11,7 @@ type InteractiveDao interface {
 	IncrReadCnt(ctx context.Context, bizID int64, biz string) error
 	InsertLikeBiz(ctx context.Context, userId int64, bizID int64, biz string) error
 	DeleteLikeBiz(ctx context.Context, userId int64, bizID int64, biz string) error
+	InsertCollectBiz(ctx context.Context, uid int64, id int64, cid int64, biz string) error
 }
 
 var _ InteractiveDao = (*GormInteractiveDao)(nil)
@@ -21,6 +22,36 @@ type GormInteractiveDao struct {
 
 func NewInteractiveDao(db *gorm.DB) InteractiveDao {
 	return &GormInteractiveDao{db: db}
+}
+
+func (dao *GormInteractiveDao) InsertCollectBiz(ctx context.Context, uid int64, id int64, cid int64, biz string) error {
+	now := time.Now().UnixMilli()
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		collection := UserCollectionBiz{
+			UserID:    uid,
+			CID:       cid,
+			Biz:       biz,
+			BizID:     id,
+			UpdatedAt: now,
+			CreatedAt: now,
+		}
+		err := tx.Create(&collection).Error
+		if err != nil {
+			return err
+		}
+		return tx.Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"updated_at":  now,
+				"collect_cnt": gorm.Expr("collect_cnt + ?", 1),
+			}),
+		}).Create(&Interactive{
+			BizID:      id,
+			Biz:        biz,
+			CollectCnt: 1,
+			UpdatedAt:  now,
+			CreatedAt:  now,
+		}).Error
+	})
 }
 
 func (dao *GormInteractiveDao) InsertLikeBiz(ctx context.Context, userId int64, bizID int64, biz string) error {
@@ -111,6 +142,16 @@ type UserLikeBiz struct {
 	BizID     int64  `gorm:"uniqueIndex:user_biz_type_id"`
 	Biz       string `gorm:"type:varchar(128);uniqueIndex:user_biz_type_id"`
 	Status    int    `gorm:"comment:0-取消 1-喜爱"`
+	CreatedAt int64
+	UpdatedAt int64
+}
+
+type UserCollectionBiz struct {
+	ID        int64  `gorm:"primary_key;AUTO_INCREMENT"`
+	UserID    int64  `gorm:"uniqueIndex:user_biz_type_id"`
+	BizID     int64  `gorm:"uniqueIndex:user_biz_type_id"`
+	Biz       string `gorm:"type:varchar(128);uniqueIndex:user_biz_type_id"`
+	CID       int64  `gorm:"index"`
 	CreatedAt int64
 	UpdatedAt int64
 }

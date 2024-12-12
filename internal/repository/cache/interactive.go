@@ -20,6 +20,7 @@ type InteractiveCache interface {
 	IncrReadCntIfPresent(ctx context.Context, bizID int64, biz string) error
 	IncrLikeCntIfPresent(ctx context.Context, bizID int64, biz string) error
 	DecrLikeCntIfPresent(ctx context.Context, bizID int64, biz string) error
+	IncrCollectCntIfPresent(ctx context.Context, bizID int64, id int64, biz string) error
 }
 
 var _ InteractiveCache = (*RedisInteractiveCache)(nil)
@@ -28,16 +29,20 @@ type RedisInteractiveCache struct {
 	client redis.Cmdable
 }
 
+func NewInteractiveCache(client redis.Cmdable) InteractiveCache {
+	return &RedisInteractiveCache{client: client}
+}
+
 func (cache *RedisInteractiveCache) DecrLikeCntIfPresent(ctx context.Context, bizID int64, biz string) error {
 	return cache.client.Eval(ctx, incrScript, []string{cache.key(biz, bizID)}, likeKey, -1).Err()
 }
 
-func (cache *RedisInteractiveCache) IncrLikeCntIfPresent(ctx context.Context, bizID int64, biz string) error {
-	return cache.client.Eval(ctx, incrScript, []string{cache.key(biz, bizID)}, likeKey, 1).Err()
+func (cache *RedisInteractiveCache) IncrCollectCntIfPresent(ctx context.Context, bizID int64, id int64, biz string) error {
+	return cache.client.Eval(ctx, incrScript, []string{cache.key(biz, bizID)}, collectKey, 1).Err()
 }
 
-func NewInteractiveCache(client redis.Cmdable) InteractiveCache {
-	return &RedisInteractiveCache{client: client}
+func (cache *RedisInteractiveCache) IncrLikeCntIfPresent(ctx context.Context, bizID int64, biz string) error {
+	return cache.client.Eval(ctx, incrScript, []string{cache.key(biz, bizID)}, likeKey, 1).Err()
 }
 
 func (cache *RedisInteractiveCache) IncrReadCntIfPresent(ctx context.Context, bizID int64, biz string) error {

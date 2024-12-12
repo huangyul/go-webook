@@ -33,6 +33,7 @@ func (h *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 	pg := ug.Group("/pub")
 	pg.GET("/detail/:id", h.PubDetail)
 	pg.POST("/like/:id", h.Like)
+	pg.POST("/collect", h.Collect)
 }
 
 type ArticleEditReq struct {
@@ -184,6 +185,25 @@ func (h *ArticleHandler) Like(ctx *gin.Context) {
 	}
 	if er != nil {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(er.Error()))
+		return
+	}
+	WriteSuccess(ctx, nil)
+}
+
+func (h *ArticleHandler) Collect(ctx *gin.Context) {
+	type Req struct {
+		ID  int64 `json:"id" binding:"required"`
+		CID int64 `json:"cid"`
+	}
+	var req Req
+	if err := ctx.ShouldBind(&req); err != nil {
+		WriteErrno(ctx, errno.ErrBadRequest.SetMessage(validator.Translate(err)))
+		return
+	}
+	userId := ctx.MustGet("user_id").(int64)
+	err := h.interSvc.Collect(ctx, userId, req.ID, req.CID, biz)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return
 	}
 	WriteSuccess(ctx, nil)
