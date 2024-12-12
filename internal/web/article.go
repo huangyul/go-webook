@@ -168,7 +168,7 @@ func (h *ArticleHandler) Like(ctx *gin.Context) {
 		return
 	}
 	type Req struct {
-		Like bool `json:"like" binding:"required"`
+		Like bool `json:"like"`
 	}
 	var req Req
 	if err := ctx.ShouldBind(&req); err != nil {
