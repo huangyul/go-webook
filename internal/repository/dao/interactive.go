@@ -12,12 +12,33 @@ type InteractiveDao interface {
 	InsertLikeBiz(ctx context.Context, userId int64, bizID int64, biz string) error
 	DeleteLikeBiz(ctx context.Context, userId int64, bizID int64, biz string) error
 	InsertCollectBiz(ctx context.Context, uid int64, id int64, cid int64, biz string) error
+	Get(ctx context.Context, id int64, biz string) (Interactive, error)
+	GetLikedInfo(ctx context.Context, uid int64, id int64, biz string) (UserLikeBiz, error)
+	GetCollectInfo(ctx context.Context, uid int64, id int64, biz string) (UserCollectionBiz, error)
 }
 
 var _ InteractiveDao = (*GormInteractiveDao)(nil)
 
 type GormInteractiveDao struct {
 	db *gorm.DB
+}
+
+func (dao *GormInteractiveDao) Get(ctx context.Context, id int64, biz string) (Interactive, error) {
+	var inte Interactive
+	err := dao.db.WithContext(ctx).Where("biz = ? AND biz_id = ?", biz, id).Find(&inte).Error
+	return inte, err
+}
+
+func (dao *GormInteractiveDao) GetLikedInfo(ctx context.Context, uid int64, id int64, biz string) (UserLikeBiz, error) {
+	var like UserLikeBiz
+	err := dao.db.WithContext(ctx).Where("user_id = ? AND biz = ? AND id = ?", uid, biz, id).Find(&like).Error
+	return like, err
+}
+
+func (dao *GormInteractiveDao) GetCollectInfo(ctx context.Context, uid int64, id int64, biz string) (UserCollectionBiz, error) {
+	var Collect UserCollectionBiz
+	err := dao.db.WithContext(ctx).Where("user_id = ? AND biz = ? AND id = ?", uid, biz, id).Find(&Collect).Error
+	return Collect, err
 }
 
 func NewInteractiveDao(db *gorm.DB) InteractiveDao {

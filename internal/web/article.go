@@ -6,7 +6,9 @@ import (
 	"github.com/huangyul/go-blog/internal/pkg/errno"
 	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
 	"github.com/huangyul/go-blog/internal/service"
+	"golang.org/x/sync/errgroup"
 	"strconv"
+	"time"
 )
 
 const biz = "article"
@@ -150,15 +152,44 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 		return
 	}
 	userId := ctx.MustGet("user_id").(int64)
-	art, err := h.svc.PubDetail(ctx, userId, id)
+	var (
+		eg   errgroup.Group
+		art  domain.Article
+		inte domain.Interactive
+	)
+	eg.Go(func() error {
+		var er error
+		art, er = h.svc.Detail(ctx, userId, id)
+		return er
+	})
+	eg.Go(func() error {
+		var er error
+		inte, er = h.interSvc.Get(ctx, userId, id, biz)
+		return er
+	})
+	err = eg.Wait()
 	if err != nil {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return
 	}
+	res := pubDetail{
+		ID:         art.ID,
+		Title:      art.Title,
+		Content:    art.Content,
+		AuthorName: art.Author.Name,
+		AuthorID:   art.Author.ID,
+		UpdatedAt:  art.UpdatedAt.Format(time.DateOnly),
+		CreatedAt:  art.CreatedAt.Format(time.DateOnly),
+		ReadCnt:    inte.ReadCnt,
+		LikeCnt:    inte.LikeCnt,
+		CollectCnt: inte.CollectCnt,
+		Liked:      inte.Liked,
+		Collected:  inte.Collected,
+	}
 	go func() {
 		h.interSvc.IncrReadCnt(ctx, art.ID, biz)
 	}()
-	WriteSuccess(ctx, gin.H{"data": art})
+	WriteSuccess(ctx, gin.H{"data": res})
 }
 
 func (h *ArticleHandler) Like(ctx *gin.Context) {
@@ -207,4 +238,19 @@ func (h *ArticleHandler) Collect(ctx *gin.Context) {
 		return
 	}
 	WriteSuccess(ctx, nil)
+}
+
+type pubDetail struct {
+	ID         int64  `json:"id"`
+	AuthorName string `json:"author_name"`
+	AuthorID   int64  `json:"author_id"`
+	Title      string `json:"title"`
+	Content    string `json:"content"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+	ReadCnt    int    `json:"read_cnt"`
+	LikeCnt    int    `json:"like_cnt"`
+	CollectCnt int    `json:"collect_cnt"`
+	Liked      bool   `json:"liked"`
+	Collected  bool   `json:"collected"`
 }

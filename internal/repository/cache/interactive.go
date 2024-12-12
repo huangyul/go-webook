@@ -3,8 +3,12 @@ package cache
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
+	"github.com/huangyul/go-blog/internal/domain"
 	"github.com/redis/go-redis/v9"
+	"strconv"
+	"time"
 )
 
 const (
@@ -21,12 +25,37 @@ type InteractiveCache interface {
 	IncrLikeCntIfPresent(ctx context.Context, bizID int64, biz string) error
 	DecrLikeCntIfPresent(ctx context.Context, bizID int64, biz string) error
 	IncrCollectCntIfPresent(ctx context.Context, bizID int64, id int64, biz string) error
+	Get(ctx context.Context, id int64, biz string) (domain.Interactive, error)
+	Set(ctx context.Context, id int64, biz string, int domain.Interactive) error
 }
 
 var _ InteractiveCache = (*RedisInteractiveCache)(nil)
 
 type RedisInteractiveCache struct {
 	client redis.Cmdable
+}
+
+func (cache *RedisInteractiveCache) Get(ctx context.Context, id int64, biz string) (domain.Interactive, error) {
+	res, err := cache.client.HGetAll(ctx, cache.key(biz, id)).Result()
+	if err != nil {
+		return domain.Interactive{}, err
+	}
+	if len(res) == 0 {
+		return domain.Interactive{}, errors.New("key not found")
+	}
+	var int domain.Interactive
+	int.CollectCnt, _ = strconv.Atoi(res[collectKey])
+	int.ReadCnt, _ = strconv.Atoi(res[readKey])
+	int.LikeCnt, _ = strconv.Atoi(res[likeKey])
+	return int, nil
+}
+
+func (cache *RedisInteractiveCache) Set(ctx context.Context, id int64, biz string, int domain.Interactive) error {
+	err := cache.client.HSet(ctx, cache.key(biz, id), readKey, int.ReadCnt, likeKey, int.LikeCnt, collectKey, int.CollectCnt).Err()
+	if err != nil {
+		return err
+	}
+	return cache.client.Expire(ctx, cache.key(biz, id), time.Minute*15).Err()
 }
 
 func NewInteractiveCache(client redis.Cmdable) InteractiveCache {
