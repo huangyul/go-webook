@@ -36,6 +36,7 @@ func (h *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 	pg.GET("/detail/:id", h.PubDetail)
 	pg.POST("/like/:id", h.Like)
 	pg.POST("/collect", h.Collect)
+	pg.GET("/history", h.History)
 }
 
 type ArticleEditReq struct {
@@ -238,6 +239,16 @@ func (h *ArticleHandler) Collect(ctx *gin.Context) {
 		return
 	}
 	WriteSuccess(ctx, nil)
+}
+
+func (h *ArticleHandler) History(ctx *gin.Context) {
+	userId := ctx.MustGet("user_id").(int64)
+	arts, err := h.svc.GetHistory(ctx, userId)
+	if err != nil {
+		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
+		return
+	}
+	WriteSuccess(ctx, arts)
 }
 
 type pubDetail struct {

@@ -5,6 +5,7 @@ package main
 import (
 	"github.com/google/wire"
 	"github.com/huangyul/go-blog/internal/event/article"
+	"github.com/huangyul/go-blog/internal/event/history"
 	"github.com/huangyul/go-blog/internal/ioc"
 	"github.com/huangyul/go-blog/internal/repository"
 	"github.com/huangyul/go-blog/internal/repository/cache"
@@ -40,6 +41,10 @@ var (
 		repository.NewInteractiveRepository,
 		service.NewInteractiveService,
 	)
+	HistorySet = wire.NewSet(
+		dao.NewHistoryDao,
+		repository.NewHistoryRepository,
+	)
 )
 
 func InitApp() *App {
@@ -56,9 +61,12 @@ func InitApp() *App {
 		UserSet,
 		ArticleSet,
 		InteractiveSet,
+		HistorySet,
 
 		article.NewSaramaSyncProducer,
 		article.NewInteractiveReadConsumer,
+		history.NewConsumer,
+		history.NewSaramaProducer,
 
 		ginxjwt.NewJWT,
 

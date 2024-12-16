@@ -4,6 +4,7 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/huangyul/go-blog/internal/event"
 	"github.com/huangyul/go-blog/internal/event/article"
+	"github.com/huangyul/go-blog/internal/event/history"
 	"github.com/spf13/viper"
 )
 
@@ -29,6 +30,6 @@ func InitProducer(client sarama.Client) sarama.SyncProducer {
 	return producer
 }
 
-func InitConsumers(c1 *article.InteractiveReadConsumer) []event.Consumer {
-	return []event.Consumer{c1}
+func InitConsumers(c1 *article.InteractiveReadConsumer, c2 *history.Consumer) []event.Consumer {
+	return []event.Consumer{c1, c2}
 }

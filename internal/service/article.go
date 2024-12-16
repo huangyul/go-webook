@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/huangyul/go-blog/internal/domain"
 	"github.com/huangyul/go-blog/internal/event/article"
+	"github.com/huangyul/go-blog/internal/event/history"
 	"github.com/huangyul/go-blog/internal/pkg/log"
 	"github.com/huangyul/go-blog/internal/repository"
 )
@@ -15,24 +16,45 @@ type ArticleService interface {
 	List(ctx context.Context, uid int64, page int64, pageSize int64) ([]domain.Article, error)
 	Detail(ctx context.Context, uid int64, id int64) (domain.Article, error)
 	PubDetail(ctx context.Context, uid int64, id int64, biz string) (domain.Article, error)
+	GetHistory(ctx context.Context, user int64) ([]domain.Article, error)
 }
 
 var _ ArticleService = (*articleService)(nil)
 
 type articleService struct {
-	repo     repository.ArticleRepository
-	userRepo repository.UserRepository
-	producer article.Producer
-	l        log.Logger
+	repo            repository.ArticleRepository
+	userRepo        repository.UserRepository
+	historyRepo     repository.HistoryRepository
+	producer        article.Producer
+	historyProducer history.Producer
+	l               log.Logger
 }
 
-func NewArticleService(repo repository.ArticleRepository, userRepo repository.UserRepository, producer article.Producer, l log.Logger) ArticleService {
+func NewArticleService(repo repository.ArticleRepository, userRepo repository.UserRepository, producer article.Producer, historyRepo repository.HistoryRepository, historyProducer history.Producer, l log.Logger) ArticleService {
 	return &articleService{
-		repo:     repo,
-		userRepo: userRepo,
-		producer: producer,
-		l:        l,
+		repo:            repo,
+		userRepo:        userRepo,
+		producer:        producer,
+		historyRepo:     historyRepo,
+		historyProducer: historyProducer,
+		l:               l,
 	}
+}
+
+func (svc *articleService) GetHistory(ctx context.Context, userID int64) ([]domain.Article, error) {
+	his, err := svc.historyRepo.GetListByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]domain.Article, 0, len(his))
+	for _, hh := range his {
+		art, er := svc.repo.GetById(ctx, hh.UserID, hh.BizID)
+		if er != nil {
+			return nil, er
+		}
+		res = append(res, art)
+	}
+	return res, nil
 }
 
 func (svc *articleService) PubDetail(ctx context.Context, uid int64, id int64, biz string) (domain.Article, error) {
@@ -52,7 +74,14 @@ func (svc *articleService) PubDetail(ctx context.Context, uid int64, id int64, b
 			Biz:       biz,
 		})
 		if er != nil {
-			log.Errorw("article produce read event error", "id", art.ID, "err", er)
+			svc.l.Errorw("article produce read event error", "id", art.ID, "err", er)
+		}
+		er = svc.historyProducer.ProduceHistoryEvent(history.Event{
+			ArticleID: art.ID,
+			UserID:    user.ID,
+		})
+		if er != nil {
+			svc.l.Errorw("history produce read event error", "id", art.ID, "err", er)
 		}
 	}()
 	return art, nil
