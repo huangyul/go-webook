@@ -3,8 +3,8 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	"github.com/huangyul/go-blog/internal/event/article"
 	"github.com/huangyul/go-blog/internal/ioc"
 	"github.com/huangyul/go-blog/internal/repository"
 	"github.com/huangyul/go-blog/internal/repository/cache"
@@ -42,23 +42,32 @@ var (
 	)
 )
 
-func InitWebServer() *gin.Engine {
+func InitApp() *App {
 
 	wire.Build(
 		ioc.InitDB,
 		ioc.InitRedis,
+		ioc.InitLogger,
+		ioc.InitSaramaClient,
+		ioc.InitProducer,
+		ioc.InitConsumers,
 
 		CodeSet,
 		UserSet,
 		ArticleSet,
 		InteractiveSet,
 
+		article.NewSaramaSyncProducer,
+		article.NewInteractiveReadConsumer,
+
 		ginxjwt.NewJWT,
 
 		ioc.InitSMSService,
 		ioc.InitGinMiddlewares,
 		ioc.InitServer,
+
+		wire.Struct(new(App), "*"),
 	)
 
-	return gin.Default()
+	return new(App)
 }

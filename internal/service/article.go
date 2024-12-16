@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"github.com/huangyul/go-blog/internal/domain"
+	"github.com/huangyul/go-blog/internal/event/article"
+	"github.com/huangyul/go-blog/internal/pkg/log"
 	"github.com/huangyul/go-blog/internal/repository"
 )
 
@@ -12,7 +14,7 @@ type ArticleService interface {
 	Withdraw(ctx context.Context, uid, id int64) error
 	List(ctx context.Context, uid int64, page int64, pageSize int64) ([]domain.Article, error)
 	Detail(ctx context.Context, uid int64, id int64) (domain.Article, error)
-	PubDetail(ctx context.Context, uid int64, id int64) (domain.Article, error)
+	PubDetail(ctx context.Context, uid int64, id int64, biz string) (domain.Article, error)
 }
 
 var _ ArticleService = (*articleService)(nil)
@@ -20,16 +22,20 @@ var _ ArticleService = (*articleService)(nil)
 type articleService struct {
 	repo     repository.ArticleRepository
 	userRepo repository.UserRepository
+	producer article.Producer
+	l        log.Logger
 }
 
-func NewArticleService(repo repository.ArticleRepository, userRepo repository.UserRepository) ArticleService {
+func NewArticleService(repo repository.ArticleRepository, userRepo repository.UserRepository, producer article.Producer, l log.Logger) ArticleService {
 	return &articleService{
 		repo:     repo,
 		userRepo: userRepo,
+		producer: producer,
+		l:        l,
 	}
 }
 
-func (svc *articleService) PubDetail(ctx context.Context, uid int64, id int64) (domain.Article, error) {
+func (svc *articleService) PubDetail(ctx context.Context, uid int64, id int64, biz string) (domain.Article, error) {
 	art, err := svc.repo.GetPubById(ctx, uid, id)
 	if err != nil {
 		return domain.Article{}, err
@@ -39,6 +45,16 @@ func (svc *articleService) PubDetail(ctx context.Context, uid int64, id int64) (
 		return domain.Article{}, err
 	}
 	art.Author.Name = user.Nickname
+	go func() {
+		er := svc.producer.ProduceReadEvent(article.ReadEvent{
+			ArticleID: art.ID,
+			UserID:    user.ID,
+			Biz:       biz,
+		})
+		if er != nil {
+			log.Errorw("article produce read event error", "id", art.ID, "err", er)
+		}
+	}()
 	return art, nil
 }
 

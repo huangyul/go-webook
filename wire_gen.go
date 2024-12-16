@@ -7,8 +7,8 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	"github.com/huangyul/go-blog/internal/event/article"
 	"github.com/huangyul/go-blog/internal/ioc"
 	"github.com/huangyul/go-blog/internal/repository"
 	"github.com/huangyul/go-blog/internal/repository/cache"
@@ -20,7 +20,7 @@ import (
 
 // Injectors from wire.go:
 
-func InitWebServer() *gin.Engine {
+func InitApp() *App {
 	cmdable := ioc.InitRedis()
 	jwt := ginxjwt.NewJWT(cmdable)
 	v := ioc.InitGinMiddlewares(cmdable, jwt)
@@ -37,14 +37,24 @@ func InitWebServer() *gin.Engine {
 	articleDao := dao.NewArticleDao(db)
 	articleCache := cache.NewRedisArticleCache(cmdable)
 	articleRepository := repository.NewArticleRepository(articleDao, articleCache)
-	articleService := service.NewArticleService(articleRepository, userRepository)
+	client := ioc.InitSaramaClient()
+	syncProducer := ioc.InitProducer(client)
+	producer := article.NewSaramaSyncProducer(syncProducer)
+	logger := ioc.InitLogger()
+	articleService := service.NewArticleService(articleRepository, userRepository, producer, logger)
 	interactiveCache := cache.NewInteractiveCache(cmdable)
 	interactiveDao := dao.NewInteractiveDao(db)
 	interactiveRepository := repository.NewInteractiveRepository(interactiveCache, interactiveDao)
 	interactiveService := service.NewInteractiveService(interactiveRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactiveService)
 	engine := ioc.InitServer(v, userHandler, articleHandler)
-	return engine
+	interactiveReadConsumer := article.NewInteractiveReadConsumer(client, interactiveRepository, logger)
+	v2 := ioc.InitConsumers(interactiveReadConsumer)
+	app := &App{
+		server:    engine,
+		consumers: v2,
+	}
+	return app
 }
 
 // wire.go:

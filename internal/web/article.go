@@ -159,7 +159,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 	)
 	eg.Go(func() error {
 		var er error
-		art, er = h.svc.Detail(ctx, userId, id)
+		art, er = h.svc.PubDetail(ctx, userId, id, biz)
 		return er
 	})
 	eg.Go(func() error {
@@ -186,9 +186,9 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 		Liked:      inte.Liked,
 		Collected:  inte.Collected,
 	}
-	go func() {
-		h.interSvc.IncrReadCnt(ctx, art.ID, biz)
-	}()
+	//go func() {
+	//	h.interSvc.IncrReadCnt(ctx, art.ID, biz)
+	//}()
 	WriteSuccess(ctx, gin.H{"data": res})
 }
 
