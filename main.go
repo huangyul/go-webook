@@ -20,6 +20,13 @@ func main() {
 			panic(err)
 		}
 	}
+
+	jobs := app.jobs
+	jobs.Start()
+	defer func() {
+		<-jobs.Stop().Done()
+	}()
+
 	addr := viper.GetString("server.addr")
 	if addr == "" {
 		addr = "8088"

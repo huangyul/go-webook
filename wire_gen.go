@@ -55,9 +55,12 @@ func InitApp() *App {
 	interactiveReadConsumer := article.NewInteractiveReadConsumer(client, interactiveRepository, logger)
 	consumer := history.NewConsumer(client, historyRepository, logger)
 	v2 := ioc.InitConsumers(interactiveReadConsumer, consumer)
+	logJob := ioc.InitLogJob()
+	cron := ioc.InitJobs(logJob)
 	app := &App{
 		server:    engine,
 		consumers: v2,
+		jobs:      cron,
 	}
 	return app
 }

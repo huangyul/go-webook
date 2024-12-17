@@ -56,6 +56,8 @@ func InitApp() *App {
 		ioc.InitSaramaClient,
 		ioc.InitProducer,
 		ioc.InitConsumers,
+		ioc.InitLogJob,
+		ioc.InitJobs,
 
 		CodeSet,
 		UserSet,
