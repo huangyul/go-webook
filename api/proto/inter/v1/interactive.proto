@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package inter.v1;
+option go_package = "inter/v1;interv1";
+
+// 定义请求消息
+message IncrReadCntRequest {
+  int64 biz_id = 1; // 业务 ID
+  string biz = 2;   // 业务类型
+}
+
+message LikeRequest {
+  int64 user_id = 1; // 用户 ID
+  int64 biz_id = 2;  // 业务 ID
+  string biz = 3;    // 业务类型
+}
+
+message CancelLikeRequest {
+  int64 user_id = 1; // 用户 ID
+  int64 biz_id = 2;  // 业务 ID
+  string biz = 3;    // 业务类型
+}
+
+message CollectRequest {
+  int64 uid = 1;  // 用户 ID
+  int64 id = 2;   // 业务 ID
+  int64 cid = 3;  // 收藏夹 ID
+  string biz = 4; // 业务类型
+}
+
+message GetRequest {
+  int64 uid = 1;  // 用户 ID
+  int64 id = 2;   // 业务 ID
+  string biz = 3; // 业务类型
+}
+
+// 定义响应消息
+message InteractiveResponse {
+  int32 read_cnt = 1;    // 阅读次数
+  int32 like_cnt = 2;    // 点赞次数
+  int32 collect_cnt = 3; // 收藏次数
+  bool liked = 4;        // 是否已点赞
+  bool collected = 5;    // 是否已收藏
+}
+
+message EmptyResponse {}
+
+// 定义服务
+service InteractiveService {
+  rpc IncrReadCnt(IncrReadCntRequest) returns (EmptyResponse);
+  rpc Like(LikeRequest) returns (EmptyResponse);
+  rpc CancelLike(CancelLikeRequest) returns (EmptyResponse);
+  rpc Collect(CollectRequest) returns (EmptyResponse);
+  rpc Get(GetRequest) returns (InteractiveResponse);
+}
