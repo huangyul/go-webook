@@ -24,9 +24,9 @@ type GormInteractiveDao struct {
 }
 
 func (dao *GormInteractiveDao) Get(ctx context.Context, id int64, biz string) (Interactive, error) {
-	var inte Interactive
-	err := dao.db.WithContext(ctx).Where("biz = ? AND biz_id = ?", biz, id).Find(&inte).Error
-	return inte, err
+	var inter Interactive
+	err := dao.db.WithContext(ctx).Where("biz = ? AND biz_id = ?", biz, id).Find(&inter).Error
+	return inter, err
 }
 
 func (dao *GormInteractiveDao) GetLikedInfo(ctx context.Context, uid int64, id int64, biz string) (UserLikeBiz, error) {

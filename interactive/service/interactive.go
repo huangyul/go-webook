@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"github.com/huangyul/go-blog/internal/domain"
-	"github.com/huangyul/go-blog/internal/repository"
+	"github.com/huangyul/go-blog/interactive/domain"
+	"github.com/huangyul/go-blog/interactive/repository"
 	"golang.org/x/sync/errgroup"
 )
 

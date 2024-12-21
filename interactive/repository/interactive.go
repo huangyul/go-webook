@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-	"github.com/huangyul/go-blog/internal/domain"
-	"github.com/huangyul/go-blog/internal/repository/cache"
-	"github.com/huangyul/go-blog/internal/repository/dao"
+	"github.com/huangyul/go-blog/interactive/domain"
+	"github.com/huangyul/go-blog/interactive/repository/cache"
+	"github.com/huangyul/go-blog/interactive/repository/dao"
 	"time"
 )
 

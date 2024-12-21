@@ -4,6 +4,11 @@ package main
 
 import (
 	"github.com/google/wire"
+	interEvents "github.com/huangyul/go-blog/interactive/events"
+	interRepo "github.com/huangyul/go-blog/interactive/repository"
+	interCache "github.com/huangyul/go-blog/interactive/repository/cache"
+	interDao "github.com/huangyul/go-blog/interactive/repository/dao"
+	interService "github.com/huangyul/go-blog/interactive/service"
 	"github.com/huangyul/go-blog/internal/event/article"
 	"github.com/huangyul/go-blog/internal/event/history"
 	"github.com/huangyul/go-blog/internal/ioc"
@@ -36,10 +41,11 @@ var (
 		web.NewArticleHandler,
 	)
 	InteractiveSet = wire.NewSet(
-		dao.NewInteractiveDao,
-		cache.NewInteractiveCache,
-		repository.NewInteractiveRepository,
-		service.NewInteractiveService,
+		interDao.NewInteractiveDao,
+		interCache.NewInteractiveCache,
+		interRepo.NewInteractiveRepository,
+		interService.NewInteractiveService,
+		interEvents.NewInteractiveReadEventConsumer,
 	)
 	HistorySet = wire.NewSet(
 		dao.NewHistoryDao,
@@ -66,7 +72,6 @@ func InitApp() *App {
 		HistorySet,
 
 		article.NewSaramaSyncProducer,
-		article.NewInteractiveReadConsumer,
 		history.NewConsumer,
 		history.NewSaramaProducer,
 

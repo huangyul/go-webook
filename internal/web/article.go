@@ -2,6 +2,8 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
+	interDomain "github.com/huangyul/go-blog/interactive/domain"
+	inteService "github.com/huangyul/go-blog/interactive/service"
 	"github.com/huangyul/go-blog/internal/domain"
 	"github.com/huangyul/go-blog/internal/pkg/errno"
 	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
@@ -15,10 +17,10 @@ const biz = "article"
 
 type ArticleHandler struct {
 	svc      service.ArticleService
-	interSvc service.InteractiveService
+	interSvc inteService.InteractiveService
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc inteService.InteractiveService) *ArticleHandler {
 	return &ArticleHandler{
 		svc:      svc,
 		interSvc: interSvc,
@@ -156,7 +158,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 	var (
 		eg   errgroup.Group
 		art  domain.Article
-		inte domain.Interactive
+		inte interDomain.Interactive
 	)
 	eg.Go(func() error {
 		var er error

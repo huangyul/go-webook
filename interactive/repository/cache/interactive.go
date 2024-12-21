@@ -5,7 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/huangyul/go-blog/internal/domain"
+	"github.com/huangyul/go-blog/interactive/domain"
 	"github.com/redis/go-redis/v9"
 	"strconv"
 	"time"

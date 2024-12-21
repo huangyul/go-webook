@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	dao2 "github.com/huangyul/go-blog/interactive/repository/dao"
 	"github.com/huangyul/go-blog/internal/repository/dao"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -48,5 +49,6 @@ func InitDB() *gorm.DB {
 		panic(err)
 	}
 	dao.InitTable(db)
+	dao2.InitTable(db)
 	return db
 }
