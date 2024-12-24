@@ -12,7 +12,7 @@ redis:
   addr: "127.0.0.1:6379"
 
 kafka:
-  addr: "localhost:9094"
+  addr: "127.0.0.1:9094"
 
 grpc:
   server:

@@ -4,6 +4,7 @@ import (
 	"context"
 	interv1 "github.com/huangyul/go-blog/api/proto/gen/inter/v1"
 	"github.com/huangyul/go-blog/interactive/service"
+	"google.golang.org/grpc"
 )
 
 type InteractiveServiceServer struct {
@@ -11,8 +12,12 @@ type InteractiveServiceServer struct {
 	svc service.InteractiveService
 }
 
-func NewInteractiveServiceServer(unimplementedInteractiveServiceServer interv1.UnimplementedInteractiveServiceServer, svc service.InteractiveService) *InteractiveServiceServer {
-	return &InteractiveServiceServer{UnimplementedInteractiveServiceServer: unimplementedInteractiveServiceServer, svc: svc}
+func NewInteractiveServiceServer(svc service.InteractiveService) *InteractiveServiceServer {
+	return &InteractiveServiceServer{svc: svc}
+}
+
+func (i *InteractiveServiceServer) Register(srv *grpc.Server) {
+	interv1.RegisterInteractiveServiceServer(srv, i)
 }
 
 func (i *InteractiveServiceServer) IncrReadCnt(ctx context.Context, request *interv1.IncrReadCntRequest) (*interv1.EmptyResponse, error) {
