@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const topicName = "read_cnt"
+const topicName = "article_read"
 
 type ReadEvent struct {
 	ArticleID int64
@@ -23,15 +23,13 @@ type InteractiveReadEventConsumer struct {
 }
 
 func (c *InteractiveReadEventConsumer) Start() error {
-	group, err := sarama.NewConsumerGroupFromClient("read_cnt", c.client)
+	group, err := sarama.NewConsumerGroupFromClient("interactive", c.client)
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		er := group.Consume(ctx, []string{topicName}, saramax.NewHandler[ReadEvent](c.consume))
+		er := group.Consume(context.Background(), []string{topicName}, saramax.NewHandler[ReadEvent](c.consume))
 		if er != nil {
 			log.Println(er)
 		}

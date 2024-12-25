@@ -23,7 +23,7 @@ func main() {
 
 func initViper() {
 	viper.SetConfigName("config")
-	viper.AddConfigPath("./config")
+	viper.AddConfigPath("./interactive/config/")
 	viper.SetConfigType("yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err)

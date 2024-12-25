@@ -1,6 +1,7 @@
 package ioc
 
 import (
+	"fmt"
 	"github.com/IBM/sarama"
 	"github.com/huangyul/go-blog/interactive/events"
 	events2 "github.com/huangyul/go-blog/internal/event"
@@ -11,6 +12,7 @@ func InitSaramaClient() sarama.Client {
 	saramaCfg := sarama.NewConfig()
 	saramaCfg.Producer.Return.Successes = true
 	saramaCfg.Producer.Return.Errors = true
+	fmt.Println(viper.GetString("kafka.addr"))
 	client, err := sarama.NewClient([]string{viper.GetString("kafka.addr")}, saramaCfg)
 	if err != nil {
 		panic(err)

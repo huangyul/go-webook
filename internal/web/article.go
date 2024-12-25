@@ -2,8 +2,7 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
-	interDomain "github.com/huangyul/go-blog/interactive/domain"
-	inteService "github.com/huangyul/go-blog/interactive/service"
+	interv1 "github.com/huangyul/go-blog/api/proto/gen/inter/v1"
 	"github.com/huangyul/go-blog/internal/domain"
 	"github.com/huangyul/go-blog/internal/pkg/errno"
 	"github.com/huangyul/go-blog/internal/pkg/ginx/validator"
@@ -16,11 +15,12 @@ import (
 const biz = "article"
 
 type ArticleHandler struct {
-	svc      service.ArticleService
-	interSvc inteService.InteractiveService
+	svc service.ArticleService
+	//interSvc inteService.InteractiveService
+	interSvc interv1.InteractiveServiceClient
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc inteService.InteractiveService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc interv1.InteractiveServiceClient) *ArticleHandler {
 	return &ArticleHandler{
 		svc:      svc,
 		interSvc: interSvc,
@@ -158,7 +158,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 	var (
 		eg   errgroup.Group
 		art  domain.Article
-		inte interDomain.Interactive
+		inte *interv1.InteractiveResponse
 	)
 	eg.Go(func() error {
 		var er error
@@ -167,7 +167,11 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 	})
 	eg.Go(func() error {
 		var er error
-		inte, er = h.interSvc.Get(ctx, userId, id, biz)
+		inte, er = h.interSvc.Get(ctx, &interv1.GetRequest{
+			Uid: userId,
+			Id:  id,
+			Biz: biz,
+		})
 		return er
 	})
 	err = eg.Wait()
@@ -183,9 +187,9 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 		AuthorID:   art.Author.ID,
 		UpdatedAt:  art.UpdatedAt.Format(time.DateOnly),
 		CreatedAt:  art.CreatedAt.Format(time.DateOnly),
-		ReadCnt:    inte.ReadCnt,
-		LikeCnt:    inte.LikeCnt,
-		CollectCnt: inte.CollectCnt,
+		ReadCnt:    int(inte.ReadCnt),
+		LikeCnt:    int(inte.LikeCnt),
+		CollectCnt: int(inte.CollectCnt),
 		Liked:      inte.Liked,
 		Collected:  inte.Collected,
 	}
@@ -213,9 +217,17 @@ func (h *ArticleHandler) Like(ctx *gin.Context) {
 	userId := ctx.MustGet("user_id").(int64)
 	var er error
 	if req.Like {
-		er = h.interSvc.Like(ctx, userId, id, biz)
+		_, er = h.interSvc.Like(ctx, &interv1.LikeRequest{
+			Biz:    biz,
+			BizId:  id,
+			UserId: userId,
+		})
 	} else {
-		er = h.interSvc.CancelLike(ctx, userId, id, biz)
+		_, er = h.interSvc.CancelLike(ctx, &interv1.CancelLikeRequest{
+			Biz:    biz,
+			BizId:  id,
+			UserId: userId,
+		})
 	}
 	if er != nil {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(er.Error()))
@@ -235,7 +247,12 @@ func (h *ArticleHandler) Collect(ctx *gin.Context) {
 		return
 	}
 	userId := ctx.MustGet("user_id").(int64)
-	err := h.interSvc.Collect(ctx, userId, req.ID, req.CID, biz)
+	_, err := h.interSvc.Collect(ctx, &interv1.CollectRequest{
+		Uid: userId,
+		Biz: biz,
+		Id:  req.ID,
+		Cid: req.CID,
+	})
 	if err != nil {
 		WriteErrno(ctx, errno.ErrInternalServer.SetMessage(err.Error()))
 		return

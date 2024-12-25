@@ -65,6 +65,8 @@ func InitApp() *App {
 		ioc.InitLogJob,
 		ioc.InitJobs,
 
+		ioc.InitInteractiveGrpcClient,
+
 		CodeSet,
 		UserSet,
 		ArticleSet,
