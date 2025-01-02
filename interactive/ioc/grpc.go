@@ -1,7 +1,6 @@
 package ioc
 
 import (
-	"fmt"
 	interGrpc "github.com/huangyul/go-blog/interactive/grpc"
 	"github.com/huangyul/go-blog/pkg/grpcx"
 	"github.com/spf13/viper"
@@ -9,11 +8,21 @@ import (
 )
 
 func InitGrpc(s1 *interGrpc.InteractiveServiceServer) *grpcx.Server {
+	type Config struct {
+		EtcdAddr string `yaml:"etcdAddr"`
+		Port     int    `yaml:"port"`
+		Name     string `yaml:"name"`
+	}
+	var cfg Config
+	if err := viper.UnmarshalKey("grpc.server", &cfg); err != nil {
+		panic(err)
+	}
 	s := grpc.NewServer()
 	s1.Register(s)
-	fmt.Println(viper.GetString("grpc.server.addr"))
 	return &grpcx.Server{
-		Server: s,
-		Addr:   viper.GetString("grpc.server.addr"),
+		Port:     cfg.Port,
+		Name:     cfg.Name,
+		EtcdAddr: cfg.EtcdAddr,
+		Server:   s,
 	}
 }

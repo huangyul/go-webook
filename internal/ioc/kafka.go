@@ -2,7 +2,6 @@ package ioc
 
 import (
 	"github.com/IBM/sarama"
-	events2 "github.com/huangyul/go-blog/interactive/events"
 	"github.com/huangyul/go-blog/internal/event"
 	"github.com/huangyul/go-blog/internal/event/history"
 	"github.com/spf13/viper"
@@ -30,6 +29,6 @@ func InitProducer(client sarama.Client) sarama.SyncProducer {
 	return producer
 }
 
-func InitConsumers(c1 *events2.InteractiveReadEventConsumer, c2 *history.Consumer) []event.Consumer {
-	return []event.Consumer{c1, c2}
+func InitConsumers(c2 *history.Consumer) []event.Consumer {
+	return []event.Consumer{c2}
 }

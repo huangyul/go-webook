@@ -3,7 +3,7 @@ server:
 
 db:
   host: "127.0.0.1"
-  port: 13306
+  port: 13316
   database: "go_blog"
   username: "root"
   password: "root"
@@ -16,4 +16,6 @@ kafka:
 
 grpc:
   server:
-    addr: "127.0.0.1:8090"
+    etcdAddr: "127.0.0.1:12379"
+    port: 8099
+    name: "interactive"

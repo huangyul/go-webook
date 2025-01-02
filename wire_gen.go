@@ -58,9 +58,8 @@ func InitApp() *App {
 	interactiveServiceClient := ioc.InitInteractiveGrpcClient(interactiveService)
 	articleHandler := web.NewArticleHandler(articleService, interactiveServiceClient)
 	engine := ioc.InitServer(v, userHandler, articleHandler)
-	interactiveReadEventConsumer := events.NewInteractiveReadEventConsumer(interactiveRepository, client)
 	consumer := history.NewConsumer(client, historyRepository, logger)
-	v2 := ioc.InitConsumers(interactiveReadEventConsumer, consumer)
+	v2 := ioc.InitConsumers(consumer)
 	logJob := ioc.InitLogJob()
 	cron := ioc.InitJobs(logJob)
 	app := &App{
