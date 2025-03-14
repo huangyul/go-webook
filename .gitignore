@@ -1,0 +1,30 @@
+# 二进制文件
+*.exe
+*.dll
+*.so
+*.dylib
+
+# 测试二进制文件
+*.[oa]
+
+# 构建目录
+/bin/
+/pkg/
+/obj/
+
+# 依赖缓存
+vendor/
+
+# 临时文件
+*.tmp
+*.log
+*.cache
+
+# 编辑器和 IDE 生成的文件
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 配置文件
+.env
