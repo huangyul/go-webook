@@ -6,14 +6,14 @@ import (
 	"net/http"
 )
 
-type LoginBuilder struct {
+type LoginMiddlewareBuilder struct {
 }
 
-func NewLoginBuilder() *LoginBuilder {
-	return &LoginBuilder{}
+func NewLoginMiddlewareBuilder() *LoginMiddlewareBuilder {
+	return &LoginMiddlewareBuilder{}
 }
 
-func (b *LoginBuilder) Build() gin.HandlerFunc {
+func (b *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
 		if path == "/user/register" || path == "/user/login" {

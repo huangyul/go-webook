@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/huangyul/go-webook/internal/repository"
 	"github.com/huangyul/go-webook/internal/repository/dao"
@@ -18,16 +16,8 @@ func main() {
 	db := initDB()
 	dao.InitTable(db)
 
-	// based on cookie
-	//store := cookie.NewStore([]byte("secret"))
-	//server.Use(sessions.Sessions("webook", store))
-
-	// based on redis
-	store, err := redis.NewStore(16, "tcp", "127.0.0.1:16379", "", []byte("secret"))
-	if err != nil {
-		panic(err)
-	}
-	server.Use(sessions.Sessions("webook", store), middleware.NewLoginBuilder().Build())
+	server.Use(middleware.NewJWTLoginMiddlewareBuild(
+		middleware.AddWhiteList("/user/login", "/user/register")).Build())
 
 	userDao := dao.NewUserDAO(db)
 	userRepo := repository.NewUserRepository(userDao)
@@ -35,7 +25,7 @@ func main() {
 	userHandler := web.NewUserHandler(userService)
 	userHandler.RegisterRoutes(server)
 
-	err = server.Run("127.0.0.1:8088")
+	err := server.Run("127.0.0.1:8088")
 	if err != nil {
 		panic(err)
 	}

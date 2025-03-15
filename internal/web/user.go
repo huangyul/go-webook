@@ -5,8 +5,11 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/huangyul/go-webook/internal/service"
+	"github.com/huangyul/go-webook/internal/web/middleware"
 	"net/http"
+	"time"
 )
 
 var (
@@ -26,7 +29,8 @@ func (hdl *UserHandler) RegisterRoutes(g *gin.Engine) {
 	ug := g.Group("/user")
 	{
 		ug.POST("/register", hdl.Register)
-		ug.POST("/login", hdl.Login)
+		//ug.POST("/login", hdl.Login)
+		ug.POST("/login", hdl.JWTLogin)
 		ug.GET("/profile", hdl.Profile)
 	}
 }
@@ -64,6 +68,37 @@ func (hdl *UserHandler) Register(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"msg": "user successfully registered"})
 }
 
+func (hdl *UserHandler) JWTLogin(ctx *gin.Context) {
+	type LoginReq struct {
+		Email    string `json:"email" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	var req LoginReq
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	user, err := hdl.svc.LoginByEmail(ctx, req.Email, req.Password)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	loginClaim := middleware.LoginClaims{
+		UserId: user.ID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
+		},
+	}
+	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodHS256, loginClaim).SignedString([]byte("secret"))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"token": tokenStr})
+
+}
+
 func (hdl *UserHandler) Login(ctx *gin.Context) {
 	type LoginReq struct {
 		Email    string `json:"email"`
@@ -94,10 +129,9 @@ func (hdl *UserHandler) Login(ctx *gin.Context) {
 }
 
 func (hdl *UserHandler) Profile(ctx *gin.Context) {
-	session := sessions.Default(ctx)
-	userId := session.Get("userId")
-	id, ok := userId.(int64)
-	if !ok {
+
+	id := ctx.GetInt64("user_id")
+	if id == 0 {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "user id illegal"})
 		return
 	}
