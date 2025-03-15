@@ -80,12 +80,15 @@ func (hdl *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	session := sessions.Default(ctx)
-	session.Set("userId", user.ID)
-	session.Options(sessions.Options{
+	sess := sessions.Default(ctx)
+	sess.Set("userId", user.ID)
+	sess.Options(sessions.Options{
 		MaxAge: 86400 * 30,
 	})
-	session.Save()
+	err = sess.Save()
+	if err != nil {
+		fmt.Sprintf("session save error: %v", err)
+	}
 
 	ctx.JSON(http.StatusOK, gin.H{"msg": "user successfully login"})
 }
