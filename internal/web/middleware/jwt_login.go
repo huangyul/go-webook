@@ -58,6 +58,17 @@ func (m *JWTLoginMiddlewareBuild) Build() gin.HandlerFunc {
 			return
 		}
 
+		// can add a check here: if the token is about to expire, renew it
+		// and set it to the header
+		//if c.ExpiresAt.Sub(time.Now()) < time.Minute*5 {
+		//	c.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 30))
+		//	tokenStr, err = token.SignedString([]byte("secret"))
+		//	if err!= nil {
+		//		ctx.AbortWithStatus(http.StatusUnauthorized)
+		//		return
+		//	}
+		//	ctx.Header("x-jwt-token", tokenStr)
+
 		ctx.Set("user_id", c.UserId)
 
 		ctx.Next()
