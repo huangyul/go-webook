@@ -6,6 +6,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/huangyul/go-webook/internal/service"
 	"github.com/huangyul/go-webook/internal/web/middleware"
 	"net/http"
@@ -32,6 +33,7 @@ func (hdl *UserHandler) RegisterRoutes(g *gin.Engine) {
 		//ug.POST("/login", hdl.Login)
 		ug.POST("/login", hdl.JWTLogin)
 		ug.GET("/profile", hdl.Profile)
+		ug.POST("/edit", hdl.Edit)
 	}
 }
 
@@ -129,11 +131,54 @@ func (hdl *UserHandler) Login(ctx *gin.Context) {
 }
 
 func (hdl *UserHandler) Profile(ctx *gin.Context) {
-
-	id := ctx.GetInt64("user_id")
-	if id == 0 {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "user id illegal"})
+	userId := ctx.GetInt64("user_id")
+	user, err := hdl.svc.FindById(ctx, userId)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"msg": fmt.Sprintf("user successfully get user %d", id)})
+	ctx.JSON(http.StatusOK, gin.H{"user": struct {
+		ID        int64  `json:"id"`
+		Nickname  string `json:"nickname"`
+		Birthday  string `json:"birthday"`
+		AboutMe   string `json:"about_me"`
+		CreatedAt string `json:"created_at"`
+	}{
+		ID:        user.ID,
+		Nickname:  user.Nickname,
+		Birthday:  formatTime(user.Birthday),
+		AboutMe:   user.AboutMe,
+		CreatedAt: formatTime(user.CreatedAt),
+	}})
+}
+
+func (hdl *UserHandler) Edit(ctx *gin.Context) {
+	type Req struct {
+		Nickname string `json:"nickname"`
+		Birthday string `json:"birthday"`
+		AboutMe  string `json:"about_me"`
+	}
+	var req Req
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userId := ctx.GetInt64("user_id")
+	birthday, err := time.Parse(time.DateOnly, req.Birthday)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "birthday format error"})
+		return
+	}
+	err = hdl.svc.Update(ctx, &domain.User{
+		ID:       userId,
+		Nickname: req.Nickname,
+		Birthday: birthday,
+		AboutMe:  req.AboutMe,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"msg": "user successfully profile"})
 }

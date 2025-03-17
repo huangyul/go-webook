@@ -19,12 +19,22 @@ var (
 type UserService interface {
 	RegisterByEmail(ctx context.Context, email string, password string) error
 	LoginByEmail(ctx context.Context, email string, password string) (*domain.User, error)
+	Update(ctx context.Context, user *domain.User) error
+	FindById(ctx context.Context, userId int64) (*domain.User, error)
 }
 
 var _ UserService = (*userService)(nil)
 
 type userService struct {
 	repo repository.UserRepository
+}
+
+func (u *userService) Update(ctx context.Context, user *domain.User) error {
+	return u.repo.Update(ctx, user)
+}
+
+func (u *userService) FindById(ctx context.Context, userId int64) (*domain.User, error) {
+	return u.repo.FindByID(ctx, userId)
 }
 
 func (u *userService) RegisterByEmail(ctx context.Context, email string, password string) error {
