@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/huangyul/go-webook/internal/repository"
+	"github.com/huangyul/go-webook/internal/repository/cache"
 	"github.com/huangyul/go-webook/internal/repository/dao"
 	"github.com/huangyul/go-webook/internal/service"
 	"github.com/huangyul/go-webook/internal/web"
@@ -12,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"time"
 )
 
 func main() {
@@ -21,12 +23,15 @@ func main() {
 	redis := initRedis()
 
 	server.Use(
-		ratelimit.NewBuilder(redis).Build(),
+		ratelimit.NewBuilder(redis,
+			ratelimit.SetRate(10000),
+			ratelimit.SetInterval(time.Minute*10)).Build(),
 		middleware.NewJWTLoginMiddlewareBuild(
 			middleware.AddWhiteList("/user/login", "/user/register")).Build())
 
 	userDao := dao.NewUserDAO(db)
-	userRepo := repository.NewUserRepository(userDao)
+	userCache := cache.NewRedisUserCache(redis)
+	userRepo := repository.NewUserRepository(userDao, userCache)
 	userService := service.NewUserService(userRepo)
 	userHandler := web.NewUserHandler(userService)
 	userHandler.RegisterRoutes(server)
