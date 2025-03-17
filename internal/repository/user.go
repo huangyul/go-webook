@@ -17,6 +17,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*domain.User, error)
 	FindByID(ctx context.Context, id int64) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
+	FindByPhone(ctx context.Context, phone string) (*domain.User, error)
 }
 
 var _ UserRepository = (*userRepository)(nil)
@@ -24,6 +25,14 @@ var _ UserRepository = (*userRepository)(nil)
 type userRepository struct {
 	dao   dao.UserDAO
 	cache cache.UserCache
+}
+
+func (repo *userRepository) FindByPhone(ctx context.Context, phone string) (*domain.User, error) {
+	u, err := repo.dao.FindByPhone(ctx, phone)
+	if err != nil {
+		return nil, err
+	}
+	return repo.toDomain(u), nil
 }
 
 func (repo *userRepository) FindByID(ctx context.Context, id int64) (*domain.User, error) {

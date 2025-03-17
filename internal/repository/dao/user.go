@@ -18,12 +18,22 @@ type UserDAO interface {
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	FindById(ctx context.Context, id int64) (*User, error)
 	Update(ctx context.Context, user *User) error
+	FindByPhone(ctx context.Context, phone string) (*User, error)
 }
 
 var _ UserDAO = (*GORMUserDAO)(nil)
 
 type GORMUserDAO struct {
 	db *gorm.DB
+}
+
+func (dao *GORMUserDAO) FindByPhone(ctx context.Context, phone string) (*User, error) {
+	var user User
+	err := dao.db.WithContext(ctx).Where("phone = ?", phone).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrUserNotFound
+	}
+	return &user, err
 }
 
 func (dao *GORMUserDAO) FindById(ctx context.Context, id int64) (*User, error) {
@@ -82,6 +92,7 @@ type User struct {
 	Nickname  string `gorm:"type:varchar(255);"`
 	Birthday  time.Time
 	AboutMe   string `gorm:"type:varchar(255);"`
+	Phone     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

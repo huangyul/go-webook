@@ -21,12 +21,24 @@ type UserService interface {
 	LoginByEmail(ctx context.Context, email string, password string) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
 	FindById(ctx context.Context, userId int64) (*domain.User, error)
+	FindOrCreateByPhone(ctx context.Context, phone string) (*domain.User, error)
 }
 
 var _ UserService = (*userService)(nil)
 
 type userService struct {
 	repo repository.UserRepository
+}
+
+func (u *userService) FindOrCreateByPhone(ctx context.Context, phone string) (*domain.User, error) {
+	user, err := u.repo.FindByPhone(ctx, phone)
+	if errors.Is(err, ErrUserNotFound) {
+		// TODO 调整insert，要返回user
+		u.repo.Insert(ctx, &domain.User{
+			Phone: phone,
+		})
+	}
+
 }
 
 func (u *userService) Update(ctx context.Context, user *domain.User) error {

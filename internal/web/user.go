@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"fmt"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
@@ -18,12 +19,15 @@ var (
 	emailPattern    = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 )
 
+const biz = "login"
+
 type UserHandler struct {
-	svc service.UserService
+	svc     service.UserService
+	codeSvc service.CodeService
 }
 
-func NewUserHandler(svc service.UserService) *UserHandler {
-	return &UserHandler{svc: svc}
+func NewUserHandler(svc service.UserService, code service.CodeService) *UserHandler {
+	return &UserHandler{svc: svc, codeSvc: code}
 }
 
 func (hdl *UserHandler) RegisterRoutes(g *gin.Engine) {
@@ -34,6 +38,8 @@ func (hdl *UserHandler) RegisterRoutes(g *gin.Engine) {
 		ug.POST("/login", hdl.JWTLogin)
 		ug.GET("/profile", hdl.Profile)
 		ug.POST("/edit", hdl.Edit)
+		ug.POST("/sms/send", hdl.SendSMS)
+		ug.POST("/sms/login", hdl.SMSLogin)
 	}
 }
 
@@ -181,4 +187,51 @@ func (hdl *UserHandler) Edit(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"msg": "user successfully profile"})
+}
+
+func (hdl *UserHandler) SendSMS(context *gin.Context) {
+	type Req struct {
+		Phone string `json:"phone" binging:"required" binding:"required"`
+	}
+	var req Req
+	if err := context.ShouldBind(&req); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err := hdl.codeSvc.Send(context, biz, req.Phone)
+	if errors.Is(err, service.ErrCodeSendTooMany) {
+		context.JSON(http.StatusOK, gin.H{"msg": "code send too many"})
+		return
+	}
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	context.JSON(http.StatusOK, gin.H{"msg": "send sms successfully"})
+}
+
+func (hdl *UserHandler) SMSLogin(context *gin.Context) {
+	type Req struct {
+		Phone string `json:"phone" binding:"required"`
+		Code  string `json:"code" binding:"required"`
+	}
+	var req Req
+	if err := context.ShouldBind(&req); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ok, err := hdl.codeSvc.Verify(context, biz, req.Phone, req.Code)
+	if errors.Is(err, service.ErrCodeVerifyTooMany) {
+		context.JSON(http.StatusOK, gin.H{"msg": "code verify too many"})
+		return
+	}
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !ok {
+		context.JSON(http.StatusOK, gin.H{"msg": "code verify failed"})
+		return
+	}
+	hdl.svc.FindOrCreateByPhone()
 }
