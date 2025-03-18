@@ -53,7 +53,14 @@ func (repo *userRepository) FindByID(ctx context.Context, id int64) (*domain.Use
 }
 
 func (repo *userRepository) Update(ctx context.Context, user *domain.User) error {
-	return repo.dao.Update(ctx, repo.toEntity(user))
+	err := repo.dao.Update(ctx, repo.toEntity(user))
+	if err != nil {
+		return err
+	}
+	go func() {
+		repo.cache.Delete(ctx, user.ID)
+	}()
+	return nil
 }
 
 func NewUserRepository(dao dao.UserDAO, cache cache.UserCache) UserRepository {

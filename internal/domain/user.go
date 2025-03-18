@@ -7,7 +7,7 @@ type User struct {
 	Email     string
 	Password  string
 	Nickname  string
-	Birthday  time.Time
+	Birthday  *time.Time
 	Phone     string
 	AboutMe   string
 	CreatedAt time.Time

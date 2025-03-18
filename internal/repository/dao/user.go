@@ -46,18 +46,30 @@ func (dao *GORMUserDAO) FindById(ctx context.Context, id int64) (*User, error) {
 }
 
 func (dao *GORMUserDAO) Update(ctx context.Context, user *User) error {
-	return dao.db.WithContext(ctx).Model(&User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
+	updates := map[string]interface{}{
 		"nickname":   user.Nickname,
-		"birthday":   user.Birthday,
 		"about_me":   user.AboutMe,
 		"created_at": time.Now(),
-	}).Error
+	}
+
+	if user.Birthday != nil {
+		if user.Birthday.IsZero() {
+			updates["birthday"] = nil
+		} else {
+			updates["birthday"] = user.Birthday
+		}
+	}
+
+	return dao.db.WithContext(ctx).Model(&User{}).Where("id = ?", user.ID).Updates(updates).Error
 }
 
 func (dao *GORMUserDAO) Insert(ctx context.Context, user *User) error {
 	now := time.Now()
 	user.CreatedAt = now
 	user.UpdatedAt = now
+	if user.Birthday != nil && user.Birthday.IsZero() {
+		user.Birthday = nil
+	}
 	err := dao.db.WithContext(ctx).Create(user).Error
 	if err != nil {
 		var mysqlErr *mysql.MySQLError
@@ -86,12 +98,12 @@ func NewUserDAO(db *gorm.DB) UserDAO {
 }
 
 type User struct {
-	ID        int64  `gorm:"primary_key;auto_increment"`
-	Email     string `gorm:"type:varchar(255);uniqueIndex"`
-	Password  string `gorm:"type:varchar(255);"`
-	Nickname  string `gorm:"type:varchar(255);"`
-	Birthday  time.Time
-	AboutMe   string `gorm:"type:varchar(255);"`
+	ID        int64      `gorm:"primary_key;auto_increment"`
+	Email     string     `gorm:"type:varchar(255);uniqueIndex"`
+	Password  string     `gorm:"type:varchar(255);"`
+	Nickname  string     `gorm:"type:varchar(255);"`
+	Birthday  *time.Time `gorm:"type:datetime;"`
+	AboutMe   string     `gorm:"type:varchar(255);"`
 	Phone     string
 	CreatedAt time.Time
 	UpdatedAt time.Time

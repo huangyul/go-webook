@@ -11,12 +11,17 @@ import (
 type UserCache interface {
 	Get(ctx context.Context, id int64) (*domain.User, error)
 	Set(ctx context.Context, user *domain.User) error
+	Delete(ctx context.Context, id int64) error
 }
 
 var _ UserCache = (*RedisUserCache)(nil)
 
 type RedisUserCache struct {
 	cmd redis.Cmdable
+}
+
+func (r *RedisUserCache) Delete(ctx context.Context, id int64) error {
+	return r.cmd.Del(ctx, r.key(id)).Err()
 }
 
 func (r *RedisUserCache) Get(ctx context.Context, id int64) (*domain.User, error) {

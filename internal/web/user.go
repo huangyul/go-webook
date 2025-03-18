@@ -148,7 +148,7 @@ func (hdl *UserHandler) Profile(ctx *gin.Context) {
 	}{
 		ID:        user.ID,
 		Nickname:  user.Nickname,
-		Birthday:  formatTime(user.Birthday),
+		Birthday:  formatTime(*user.Birthday),
 		AboutMe:   user.AboutMe,
 		CreatedAt: formatTime(user.CreatedAt),
 	}})
@@ -175,7 +175,7 @@ func (hdl *UserHandler) Edit(ctx *gin.Context) {
 	err = hdl.svc.Update(ctx, &domain.User{
 		ID:       userId,
 		Nickname: req.Nickname,
-		Birthday: birthday,
+		Birthday: &birthday,
 		AboutMe:  req.AboutMe,
 	})
 	if err != nil {
