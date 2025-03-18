@@ -16,6 +16,7 @@ var (
 	ErrUserPasswordNotMatch  = errors.New("user password not match")
 )
 
+//go:generate mockgen -source=user.go -package=svcmock -destination=./mocks/user.mock.go
 type UserService interface {
 	RegisterByEmail(ctx context.Context, email string, password string) error
 	LoginByEmail(ctx context.Context, email string, password string) (*domain.User, error)

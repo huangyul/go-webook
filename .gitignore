@@ -27,3 +27,6 @@ vendor/
 
 # 配置文件
 .env
+
+# mock文件
+*.mock.go
