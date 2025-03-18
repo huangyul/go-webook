@@ -32,13 +32,17 @@ type userService struct {
 
 func (u *userService) FindOrCreateByPhone(ctx context.Context, phone string) (*domain.User, error) {
 	user, err := u.repo.FindByPhone(ctx, phone)
-	if errors.Is(err, ErrUserNotFound) {
-		// TODO 调整insert，要返回user
-		u.repo.Insert(ctx, &domain.User{
-			Phone: phone,
-		})
+	if !errors.Is(err, ErrUserNotFound) {
+		return nil, err
 	}
-
+	err = u.repo.Insert(ctx, &domain.User{
+		Phone: phone,
+	})
+	if err != nil {
+		return nil, err
+	}
+	user, err = u.repo.FindByPhone(ctx, phone)
+	return user, err
 }
 
 func (u *userService) Update(ctx context.Context, user *domain.User) error {

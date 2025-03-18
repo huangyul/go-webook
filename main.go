@@ -7,6 +7,7 @@ import (
 	"github.com/huangyul/go-webook/internal/repository/cache"
 	"github.com/huangyul/go-webook/internal/repository/dao"
 	"github.com/huangyul/go-webook/internal/service"
+	"github.com/huangyul/go-webook/internal/service/sms"
 	"github.com/huangyul/go-webook/internal/web"
 	"github.com/huangyul/go-webook/internal/web/middleware"
 	"github.com/huangyul/go-webook/pkg/ginx/middleware/ratelimit"
@@ -27,13 +28,19 @@ func main() {
 			ratelimit.SetRate(10000),
 			ratelimit.SetInterval(time.Minute*10)).Build(),
 		middleware.NewJWTLoginMiddlewareBuild(
-			middleware.AddWhiteList("/user/login", "/user/register")).Build())
+			middleware.AddWhiteList("/user/login", "/user/register", "/user/sms/login", "/user/sms/login")).Build())
+
+	smsSvc := sms.NewLocalService()
+
+	codeCache := cache.NewCodeCache(redis)
+	codeRepo := repository.NewCodeRepository(codeCache)
+	codeSvc := service.NewCodeService(smsSvc, codeRepo)
 
 	userDao := dao.NewUserDAO(db)
 	userCache := cache.NewRedisUserCache(redis)
 	userRepo := repository.NewUserRepository(userDao, userCache)
 	userService := service.NewUserService(userRepo)
-	userHandler := web.NewUserHandler(userService)
+	userHandler := web.NewUserHandler(userService, codeSvc)
 	userHandler.RegisterRoutes(server)
 
 	err := server.Run("127.0.0.1:8088")

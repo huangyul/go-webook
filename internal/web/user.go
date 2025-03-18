@@ -91,13 +91,9 @@ func (hdl *UserHandler) JWTLogin(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	loginClaim := middleware.LoginClaims{
-		UserId: user.ID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
-		},
-	}
-	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodHS256, loginClaim).SignedString([]byte("secret"))
+
+	tokenStr, err := hdl.setToken(user)
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -189,49 +185,70 @@ func (hdl *UserHandler) Edit(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"msg": "user successfully profile"})
 }
 
-func (hdl *UserHandler) SendSMS(context *gin.Context) {
+func (hdl *UserHandler) SendSMS(ctx *gin.Context) {
 	type Req struct {
 		Phone string `json:"phone" binging:"required" binding:"required"`
 	}
 	var req Req
-	if err := context.ShouldBind(&req); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	err := hdl.codeSvc.Send(context, biz, req.Phone)
+	err := hdl.codeSvc.Send(ctx, biz, req.Phone)
 	if errors.Is(err, service.ErrCodeSendTooMany) {
-		context.JSON(http.StatusOK, gin.H{"msg": "code send too many"})
+		ctx.JSON(http.StatusOK, gin.H{"msg": "code send too many"})
 		return
 	}
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	context.JSON(http.StatusOK, gin.H{"msg": "send sms successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"msg": "send sms successfully"})
 }
 
-func (hdl *UserHandler) SMSLogin(context *gin.Context) {
+func (hdl *UserHandler) SMSLogin(ctx *gin.Context) {
 	type Req struct {
 		Phone string `json:"phone" binding:"required"`
 		Code  string `json:"code" binding:"required"`
 	}
 	var req Req
-	if err := context.ShouldBind(&req); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ok, err := hdl.codeSvc.Verify(context, biz, req.Phone, req.Code)
+	ok, err := hdl.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
 	if errors.Is(err, service.ErrCodeVerifyTooMany) {
-		context.JSON(http.StatusOK, gin.H{"msg": "code verify too many"})
+		ctx.JSON(http.StatusOK, gin.H{"msg": "code verify too many"})
 		return
 	}
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	if !ok {
-		context.JSON(http.StatusOK, gin.H{"msg": "code verify failed"})
+		ctx.JSON(http.StatusOK, gin.H{"msg": "code verify failed"})
 		return
 	}
-	hdl.svc.FindOrCreateByPhone()
+	user, err := hdl.svc.FindOrCreateByPhone(ctx, req.Phone)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	tokenStr, err := hdl.setToken(user)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"token": tokenStr})
+}
+
+func (hdl *UserHandler) setToken(user *domain.User) (string, error) {
+	loginClaim := middleware.LoginClaims{
+		UserId: user.ID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
+		},
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, loginClaim).SignedString([]byte("secret"))
 }
