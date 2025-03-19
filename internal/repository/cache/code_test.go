@@ -106,3 +106,91 @@ func TestCodeCache_Set(t *testing.T) {
 		})
 	}
 }
+
+func TestCodeCache_Verify(t *testing.T) {
+	tests := []struct {
+		name    string
+		mock    func(ctrl *gomock.Controller) redis.Cmdable
+		biz     string
+		phone   string
+		code    string
+		wantOk  bool
+		wantErr error
+	}{
+		{
+			name: "success",
+			mock: func(ctrl *gomock.Controller) redis.Cmdable {
+				res := cachemocks.NewMockCmdable(ctrl)
+				cmd := redis.NewCmd(context.Background())
+				cmd.SetErr(nil)
+				cmd.SetVal(int64(0))
+				res.EXPECT().Eval(gomock.All(), luaVerifyCode, []string{"phone_code:login:13000000000"}, "123456").Return(cmd)
+				return res
+			},
+			biz:     "login",
+			phone:   "13000000000",
+			code:    "123456",
+			wantOk:  true,
+			wantErr: nil,
+		},
+		{
+			name: "redis error",
+			mock: func(ctrl *gomock.Controller) redis.Cmdable {
+				res := cachemocks.NewMockCmdable(ctrl)
+				cmd := redis.NewCmd(context.Background())
+				cmd.SetErr(errors.New("redis error"))
+				cmd.SetVal(int64(0))
+				res.EXPECT().Eval(gomock.All(), luaVerifyCode, []string{"phone_code:login:13000000000"}, "123456").Return(cmd)
+				return res
+			},
+			biz:     "login",
+			phone:   "13000000000",
+			code:    "123456",
+			wantOk:  false,
+			wantErr: errors.New("redis error"),
+		},
+		{
+			name: "incorrect verification code",
+			mock: func(ctrl *gomock.Controller) redis.Cmdable {
+				res := cachemocks.NewMockCmdable(ctrl)
+				cmd := redis.NewCmd(context.Background())
+				cmd.SetErr(nil)
+				cmd.SetVal(int64(-2))
+				res.EXPECT().Eval(gomock.All(), luaVerifyCode, []string{"phone_code:login:13000000000"}, "123456").Return(cmd)
+				return res
+			},
+			biz:     "login",
+			phone:   "13000000000",
+			code:    "123456",
+			wantOk:  false,
+			wantErr: nil,
+		},
+		{
+			name: "code verify too many",
+			mock: func(ctrl *gomock.Controller) redis.Cmdable {
+				res := cachemocks.NewMockCmdable(ctrl)
+				cmd := redis.NewCmd(context.Background())
+				cmd.SetErr(nil)
+				cmd.SetVal(int64(-1))
+				res.EXPECT().Eval(gomock.All(), luaVerifyCode, []string{"phone_code:login:13000000000"}, "123456").Return(cmd)
+				return res
+			},
+			biz:     "login",
+			phone:   "13000000000",
+			code:    "123456",
+			wantOk:  false,
+			wantErr: ErrCodeVerifyTooMany,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cache := NewCodeCache(tt.mock(ctrl))
+			ok, err := cache.Verify(context.Background(), tt.biz, tt.phone, tt.code)
+			assert.Equal(t, tt.wantOk, ok)
+			assert.Equal(t, tt.wantErr, err)
+		})
+	}
+}
