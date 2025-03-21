@@ -1,57 +1,28 @@
 package ratelimit
 
 import (
-	_ "embed"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
+	"github.com/huangyul/go-webook/pkg/limiter"
 	"net/http"
-	"time"
 )
 
-//go:embed slide_window.lua
-var limitScript string
-
-type Option func(*Builder)
-
 type Builder struct {
-	prefix   string
-	cmd      redis.Cmdable
-	rate     int
-	interval time.Duration
+	prefix string
+	limit  limiter.Limiter
 }
 
-func NewBuilder(cmd redis.Cmdable, opts ...Option) *Builder {
-	b := &Builder{
-		cmd:      cmd,
-		prefix:   "ratelimit",
-		rate:     10,
-		interval: time.Minute,
-	}
-
-	for _, opt := range opts {
-		opt(b)
-	}
-
-	return b
-}
-
-func SetRate(rate int) Option {
-	return func(b *Builder) {
-		b.rate = rate
-	}
-}
-
-func SetInterval(interval time.Duration) Option {
-	return func(b *Builder) {
-		b.interval = interval
+func NewBuilder(prefix string, limit limiter.Limiter) *Builder {
+	return &Builder{
+		prefix: prefix,
+		limit:  limit,
 	}
 }
 
 func (b *Builder) Build() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
-		isLimit, err := b.limit(ctx)
+		isLimit, err := b.limit.Limit(ctx, fmt.Sprintf("%s:%s", b.prefix, ctx.ClientIP()))
 		if err != nil {
 			// redis crash
 			ctx.AbortWithStatus(http.StatusInternalServerError)
@@ -63,10 +34,4 @@ func (b *Builder) Build() gin.HandlerFunc {
 		}
 		ctx.Next()
 	}
-}
-
-// limit rate limit based on ip
-func (b *Builder) limit(ctx *gin.Context) (bool, error) {
-	key := fmt.Sprintf("%s:limit:%s", b.prefix, ctx.ClientIP())
-	return b.cmd.Eval(ctx, limitScript, []string{key}, b.rate, b.interval.Milliseconds(), time.Now().UnixMilli()).Bool()
 }
