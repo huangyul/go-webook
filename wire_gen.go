@@ -9,6 +9,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	"github.com/huangyul/go-webook/internal/pkg/authz"
 	"github.com/huangyul/go-webook/internal/repository"
 	"github.com/huangyul/go-webook/internal/repository/cache"
 	"github.com/huangyul/go-webook/internal/repository/dao"
@@ -22,7 +23,8 @@ import (
 
 func InitService() *gin.Engine {
 	cmdable := ioc.InitRedis()
-	v := ioc.InitMiddlewares(cmdable)
+	authzAuthz := authz.NewAuthz(cmdable)
+	v := ioc.InitMiddlewares(cmdable, authzAuthz)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewRedisUserCache(cmdable)
@@ -32,7 +34,7 @@ func InitService() *gin.Engine {
 	codeCache := cache.NewCodeCache(cmdable)
 	codeRepository := repository.NewCodeRepository(codeCache)
 	codeService := service.NewCodeService(smsService, codeRepository)
-	userHandler := web.NewUserHandler(userService, codeService)
+	userHandler := web.NewUserHandler(userService, codeService, authzAuthz)
 	engine := ioc.InitWebServer(v, userHandler)
 	return engine
 }

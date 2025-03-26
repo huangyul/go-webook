@@ -6,11 +6,11 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/huangyul/go-webook/internal/domain"
+	"github.com/huangyul/go-webook/internal/pkg/authz"
 	"github.com/huangyul/go-webook/internal/service"
-	"github.com/huangyul/go-webook/internal/web/middleware"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -24,10 +24,11 @@ const biz = "login"
 type UserHandler struct {
 	svc     service.UserService
 	codeSvc service.CodeService
+	jwt     authz.Authz
 }
 
-func NewUserHandler(svc service.UserService, code service.CodeService) *UserHandler {
-	return &UserHandler{svc: svc, codeSvc: code}
+func NewUserHandler(svc service.UserService, code service.CodeService, jwt authz.Authz) *UserHandler {
+	return &UserHandler{svc: svc, codeSvc: code, jwt: jwt}
 }
 
 func (hdl *UserHandler) RegisterRoutes(g *gin.Engine) {
@@ -40,6 +41,7 @@ func (hdl *UserHandler) RegisterRoutes(g *gin.Engine) {
 		ug.POST("/edit", hdl.Edit)
 		ug.POST("/sms/send", hdl.SendSMS)
 		ug.POST("/sms/login", hdl.SMSLogin)
+		ug.GET("/logout", hdl.Logout)
 	}
 }
 
@@ -92,14 +94,17 @@ func (hdl *UserHandler) JWTLogin(ctx *gin.Context) {
 		return
 	}
 
-	tokenStr, err := hdl.setToken(user)
+	accessToken, refreshToken, err := hdl.jwt.GenerateToken(user.ID, ctx.Request.UserAgent())
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"token": tokenStr})
+	ctx.JSON(http.StatusOK, gin.H{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	})
 
 }
 
@@ -235,20 +240,26 @@ func (hdl *UserHandler) SMSLogin(ctx *gin.Context) {
 		return
 	}
 
-	tokenStr, err := hdl.setToken(user)
+	accessToken, refreshToken, err := hdl.jwt.GenerateToken(user.ID, ctx.Request.UserAgent())
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"token": tokenStr})
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	})
 }
 
-func (hdl *UserHandler) setToken(user *domain.User) (string, error) {
-	loginClaim := middleware.LoginClaims{
-		UserId: user.ID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
-		},
+func (hdl *UserHandler) Logout(ctx *gin.Context) {
+	tokenStr := ctx.GetHeader("Authorization")
+	tokenStr = strings.Replace(tokenStr, "Bearer ", "", 1)
+	err := hdl.jwt.Logout(tokenStr)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
-	return jwt.NewWithClaims(jwt.SigningMethodHS256, loginClaim).SignedString([]byte("secret"))
+	ctx.JSON(http.StatusOK, gin.H{"msg": "user successfully logged out"})
 }

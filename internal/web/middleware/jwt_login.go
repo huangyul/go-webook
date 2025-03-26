@@ -2,7 +2,8 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/huangyul/go-webook/internal/pkg/authz"
 	"net/http"
 	"strings"
 )
@@ -11,6 +12,7 @@ type Option func(*JWTLoginMiddlewareBuild)
 
 type JWTLoginMiddlewareBuild struct {
 	WhiteList []string
+	jwt       authz.Authz
 }
 
 func AddWhiteList(whiteList ...string) Option {
@@ -19,8 +21,10 @@ func AddWhiteList(whiteList ...string) Option {
 	}
 }
 
-func NewJWTLoginMiddlewareBuild(opts ...Option) *JWTLoginMiddlewareBuild {
-	m := &JWTLoginMiddlewareBuild{}
+func NewJWTLoginMiddlewareBuild(jwt authz.Authz, opts ...Option) *JWTLoginMiddlewareBuild {
+	m := &JWTLoginMiddlewareBuild{
+		jwt: jwt,
+	}
 	for _, opt := range opts {
 		opt(m)
 	}
@@ -49,11 +53,15 @@ func (m *JWTLoginMiddlewareBuild) Build() gin.HandlerFunc {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		var c LoginClaims
-		token, err := jwt.ParseWithClaims(tokenStr, &c, func(token *jwt.Token) (interface{}, error) {
-			return []byte("secret"), nil
-		})
-		if err != nil || !token.Valid {
+
+		c, err := m.jwt.VerifyToken(tokenStr)
+		if err != nil {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		ok, err := m.jwt.CheckToken(tokenStr)
+		if err != nil || !ok {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

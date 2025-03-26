@@ -5,6 +5,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	"github.com/huangyul/go-webook/internal/pkg/authz"
 	"github.com/huangyul/go-webook/internal/repository"
 	"github.com/huangyul/go-webook/internal/repository/cache"
 	"github.com/huangyul/go-webook/internal/repository/dao"
@@ -41,6 +42,8 @@ func InitService() *gin.Engine {
 		userSet,
 		codeSet,
 		smsSet,
+
+		authz.NewAuthz,
 
 		ioc.InitMiddlewares,
 		ioc.InitWebServer,

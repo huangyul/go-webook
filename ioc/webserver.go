@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/huangyul/go-webook/internal/pkg/authz"
 	"github.com/huangyul/go-webook/internal/web"
 	"github.com/huangyul/go-webook/internal/web/middleware"
 	"github.com/huangyul/go-webook/pkg/ginx/middleware/ratelimit"
@@ -20,10 +21,10 @@ func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine
 	return server
 }
 
-func InitMiddlewares(cmd redis.Cmdable) []gin.HandlerFunc {
+func InitMiddlewares(cmd redis.Cmdable, jwt authz.Authz) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		ratelimit.NewBuilder("ip_limit", limiter.NewRedisSlideWindowLimiter(cmd, time.Second, 10)).Build(),
-		middleware.NewJWTLoginMiddlewareBuild(
+		middleware.NewJWTLoginMiddlewareBuild(jwt,
 			middleware.AddWhiteList("/user/login", "/user/register", "/user/sms/login", "/user/sms/login")).Build(),
 	}
 }
