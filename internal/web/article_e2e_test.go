@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/huangyul/go-webook/internal/repository"
@@ -68,6 +69,11 @@ func (s *E2ETestSuite) TearDownSuite() {
 	// 清理资源
 }
 
+func (s *E2ETestSuite) TearDownTest() {
+	s.db.Exec("TRUNCATE TABLE `articles`")
+	s.db.Exec("TRUNCATE TABLE `pub_articles`")
+}
+
 // SetUserId 设置测试用户ID
 func (s *E2ETestSuite) SetUserId(id int64) {
 	s.userId = id
@@ -111,7 +117,7 @@ func (s *ArticleTestSuite) SetupSuite() {
 	s.articleHandler.Register(s.server)
 }
 
-// TestArticleSave 测试文章保存
+// TestArticleSave
 func (s *ArticleTestSuite) TestArticleSave() {
 	type Req struct {
 		Id      int64  `json:"id"`
@@ -170,6 +176,115 @@ func (s *ArticleTestSuite) TestArticleSave() {
 			assert.Equal(t, tt.wantBody.Msg, rep.Msg)
 			assert.Equal(t, tt.wantBody.Data, rep.Data)
 
+			if tt.after != nil {
+				tt.after(t)
+			}
+		})
+	}
+}
+
+// TestArticlePublish
+func (s *ArticleTestSuite) TestArticlePublish() {
+	type Req struct {
+		Id      int64  `json:"id"`
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	}
+	tests := []struct {
+		name           string
+		before         func(t *testing.T)
+		after          func(t *testing.T)
+		req            Req
+		wantStatusCode int
+		wantBody       ApiResponse[any]
+	}{
+		{
+			name: "success: none of them exists",
+			before: func(t *testing.T) {
+				s.CleanTable("articles")
+				s.CleanTable("pub_articles")
+			},
+			after: func(t *testing.T) {
+				var art dao.Article
+				err := s.db.Where("id = ? AND author_id = ?", 1, s.userId).First(&art).Error
+				assert.NoError(t, err)
+				assert.Equal(t, int64(1), art.Id)
+				assert.Equal(t, "title", art.Title)
+				assert.Equal(t, "content", art.Content)
+				var pArt dao.PubArticle
+				err = s.db.Where("id = ? AND author_id = ?", 1, s.userId).First(&pArt).Error
+				assert.NoError(t, err)
+				assert.Equal(t, int64(1), pArt.Id)
+				assert.Equal(t, "title", pArt.Title)
+				assert.Equal(t, "content", pArt.Content)
+			},
+			req: Req{
+				Title:   "title",
+				Content: "content",
+			},
+			wantStatusCode: http.StatusOK,
+			wantBody: ApiResponse[any]{
+				Code: 0,
+				Msg:  "success",
+				Data: nil,
+			},
+		},
+		{
+			name: "success: article exists, pub_articles not exists",
+			before: func(t *testing.T) {
+				s.CleanTable("articles")
+				s.CleanTable("pub_articles")
+				now := time.Now()
+				err := s.db.Create(&dao.Article{
+					Title:     "title",
+					Content:   "content",
+					AuthorId:  s.userId,
+					CreatedAt: now,
+					UpdatedAt: now,
+				}).Error
+				assert.NoError(t, err)
+			},
+			after: func(t *testing.T) {
+				var art dao.Article
+				err := s.db.Where("id = ? AND author_id = ?", 1, s.userId).First(&art).Error
+				assert.NoError(t, err)
+				assert.Equal(t, int64(1), art.Id)
+				assert.Equal(t, "new_title", art.Title)
+				assert.Equal(t, "new_content", art.Content)
+				var pArt dao.PubArticle
+				err = s.db.Where("id = ? AND author_id = ?", 1, s.userId).First(&pArt).Error
+				assert.NoError(t, err)
+				assert.Equal(t, int64(1), pArt.Id)
+				assert.Equal(t, "new_title", pArt.Title)
+				assert.Equal(t, "new_content", pArt.Content)
+			},
+			req: Req{
+				Id:      int64(1),
+				Title:   "new_title",
+				Content: "new_content",
+			},
+			wantStatusCode: http.StatusOK,
+			wantBody: ApiResponse[any]{
+				Code: 0,
+				Msg:  "success",
+				Data: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		s.T().Run(tt.name, func(t *testing.T) {
+			if tt.before != nil {
+				tt.before(t)
+			}
+			resp := s.SendRequest(http.MethodPost, "/article/publish", tt.req)
+			assert.Equal(t, tt.wantStatusCode, resp.Code)
+			var rep ApiResponse[any]
+			err := json.Unmarshal(resp.Body.Bytes(), &rep)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantBody.Code, rep.Code)
+			assert.Equal(t, tt.wantBody.Msg, rep.Msg)
+			assert.Equal(t, tt.wantBody.Data, rep.Data)
 			if tt.after != nil {
 				tt.after(t)
 			}
