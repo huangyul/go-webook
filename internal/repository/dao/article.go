@@ -12,6 +12,7 @@ type ArticleDAO interface {
 	Insert(ctx context.Context, art *Article) (int64, error)
 	UpdateById(ctx context.Context, art *Article) error
 	Sync(ctx context.Context, art *Article) error
+	SyncStatus(ctx context.Context, userId, id int64, status uint8) error
 }
 
 var (
@@ -28,6 +29,26 @@ type GormArticleDAO struct {
 	db *gorm.DB
 }
 
+func (dao *GormArticleDAO) SyncStatus(ctx context.Context, userId, id int64, status uint8) error {
+	now := time.Now()
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&Article{}).Where("id = ? AND author_id = ?", id, userId).Updates(map[string]interface{}{
+			"status":     status,
+			"created_at": now,
+		})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return ErrArticleNotFound
+		}
+		return tx.Model(&PubArticle{}).Where("id = ? AND author_id = ?", id, userId).Updates(map[string]interface{}{
+			"status":     status,
+			"created_at": now,
+		}).Error
+	})
+}
+
 func (dao *GormArticleDAO) Sync(ctx context.Context, art *Article) error {
 	err := dao.db.Transaction(func(tx *gorm.DB) error {
 		d := NewArticleDAO(tx)
@@ -41,18 +62,14 @@ func (dao *GormArticleDAO) Sync(ctx context.Context, art *Article) error {
 			return er
 		}
 		now := time.Now()
-		pubArt := PubArticle{
-			Title:     art.Title,
-			Content:   art.Content,
-			CreatedAt: now,
-			UpdatedAt: now,
-		}
+		pubArt := PubArticle(*art)
 		return tx.WithContext(ctx).Model(&PubArticle{}).Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "id"}},
 			DoUpdates: clause.Assignments(map[string]interface{}{
 				"updated_at": now,
 				"content":    pubArt.Content,
 				"title":      pubArt.Title,
+				"status":     pubArt.Status,
 			}),
 		}).Create(art).Error
 	})
@@ -77,6 +94,7 @@ func (dao *GormArticleDAO) UpdateById(ctx context.Context, art *Article) error {
 		"updated_at": now,
 		"title":      art.Title,
 		"content":    art.Content,
+		"status":     art.Status,
 	})
 	if res.Error != nil {
 		return res.Error
@@ -92,6 +110,7 @@ type Article struct {
 	Title     string
 	Content   string `gorm:"type:BLOB"`
 	AuthorId  int64  `gorm:"column:author_id"`
+	Status    uint8
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

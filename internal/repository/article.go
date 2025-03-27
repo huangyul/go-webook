@@ -10,10 +10,15 @@ type ArticleRepository interface {
 	Insert(ctx context.Context, art *domain.Article) (int64, error)
 	UpdateById(ctx context.Context, art *domain.Article) error
 	Sync(ctx context.Context, art *domain.Article) error
+	SyncStatus(ctx context.Context, userId, id int64, status domain.ArticleStatus) error
 }
 
 type articleRepository struct {
 	dao dao.ArticleDAO
+}
+
+func (a *articleRepository) SyncStatus(ctx context.Context, userId, id int64, status domain.ArticleStatus) error {
+	return a.dao.SyncStatus(ctx, userId, id, status.ToUint8())
 }
 
 func (a *articleRepository) Insert(ctx context.Context, art *domain.Article) (int64, error) {

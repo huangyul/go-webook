@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/huangyul/go-webook/internal/domain"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -288,6 +289,98 @@ func (s *ArticleTestSuite) TestArticlePublish() {
 			if tt.after != nil {
 				tt.after(t)
 			}
+		})
+	}
+}
+
+func (s *ArticleTestSuite) TestArticleWithdraw() {
+	tests := []struct {
+		name           string
+		before         func(t *testing.T)
+		after          func(t *testing.T)
+		id             int64
+		wantStatusCode int
+		wantBody       ApiResponse[any]
+	}{
+		{
+			name: "success",
+			before: func(t *testing.T) {
+				s.CleanTable("articles")
+				s.CleanTable("pub_articles")
+				now := time.Now()
+				art := dao.Article{
+					Title:     "title",
+					Content:   "content",
+					AuthorId:  s.userId,
+					CreatedAt: now,
+					UpdatedAt: now,
+					Status:    domain.ArticleStatusPublished.ToUint8(),
+				}
+				err := s.db.Create(&art).Error
+				assert.NoError(t, err)
+				pubArticle := dao.PubArticle{
+					Title:     "title",
+					Content:   "content",
+					AuthorId:  s.userId,
+					CreatedAt: now,
+					UpdatedAt: now,
+					Status:    domain.ArticleStatusPublished.ToUint8(),
+				}
+				err = s.db.Create(&pubArticle).Error
+				assert.NoError(t, err)
+			},
+			after: func(t *testing.T) {
+				var art dao.Article
+				err := s.db.Where("id = ? AND author_id = ?", 1, s.userId).First(&art).Error
+				assert.NoError(t, err)
+				assert.Equal(t, domain.ArticleStatusPrivate.ToUint8(), art.Status)
+				var pubArticle dao.PubArticle
+				err = s.db.Where("id = ? AND author_id = ?", 1, s.userId).First(&pubArticle).Error
+				assert.NoError(t, err)
+				assert.Equal(t, domain.ArticleStatusPrivate.ToUint8(), pubArticle.Status)
+			},
+			id:             1,
+			wantStatusCode: http.StatusOK,
+			wantBody: ApiResponse[any]{
+				Code: 0,
+				Msg:  "success",
+				Data: nil,
+			},
+		},
+		{
+			name: "article not exists, pub_articles not exists",
+			before: func(t *testing.T) {
+				s.CleanTable("articles")
+				s.CleanTable("pub_articles")
+			},
+			after: func(t *testing.T) {
+			},
+			id:             1,
+			wantStatusCode: http.StatusOK,
+			wantBody: ApiResponse[any]{
+				Code: 1,
+				Msg:  "article not found",
+				Data: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		s.T().Run(tt.name, func(t *testing.T) {
+			if tt.before != nil {
+				tt.before(t)
+			}
+			if tt.after != nil {
+				defer tt.after(t)
+			}
+			resp := s.SendRequest(http.MethodGet, fmt.Sprintf("/article/withdraw?id=%d", tt.id), nil)
+			assert.Equal(t, tt.wantStatusCode, resp.Code)
+			var rep ApiResponse[any]
+			err := json.Unmarshal(resp.Body.Bytes(), &rep)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantBody.Code, rep.Code)
+			assert.Equal(t, tt.wantBody.Msg, rep.Msg)
+			assert.Equal(t, tt.wantBody.Data, rep.Data)
 		})
 	}
 }

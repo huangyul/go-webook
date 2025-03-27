@@ -1,10 +1,12 @@
 package web
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/huangyul/go-webook/internal/service"
 	"net/http"
+	"strconv"
 )
 
 type ArticleHandler struct {
@@ -22,6 +24,7 @@ func (a *ArticleHandler) Register(g *gin.Engine) {
 	{
 		ug.POST("save", a.Save)
 		ug.POST("publish", a.Publish)
+		ug.GET("withdraw", a.Withdraw)
 	}
 }
 
@@ -74,6 +77,22 @@ func (a *ArticleHandler) Publish(ctx *gin.Context) {
 	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	writeSuccess[any](ctx, nil)
+}
+
+func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
+	idStr := ctx.Query("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writeError[any](ctx, errors.New("illegal id"))
+		return
+	}
+	userId := ctx.MustGet("userId").(int64)
+	err = a.svc.WithDraw(ctx, userId, id)
+	if err != nil {
+		writeError[any](ctx, err)
 		return
 	}
 	writeSuccess[any](ctx, nil)
