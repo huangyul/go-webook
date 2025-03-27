@@ -90,7 +90,7 @@ func (dao *GormArticleDAO) UpdateById(ctx context.Context, art *Article) error {
 type Article struct {
 	Id        int64 `gorm:"primary_key;auto_increment"`
 	Title     string
-	Content   string `gorm:"type:blog"`
+	Content   string `gorm:"type:BLOB"`
 	AuthorId  int64  `gorm:"column:author_id"`
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -49,7 +49,7 @@ func (a *ArticleHandler) Save(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"id": req.Id})
+	writeSuccess[any](ctx, nil)
 }
 
 func (a *ArticleHandler) Publish(ctx *gin.Context) {

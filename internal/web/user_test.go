@@ -130,7 +130,7 @@ func TestUserHandler_Register(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			userSvc, codeSvc := testCase.mock(ctrl)
-			hdl := NewUserHandler(userSvc, codeSvc)
+			hdl := NewUserHandler(userSvc, codeSvc, nil)
 			server := gin.New()
 			hdl.RegisterRoutes(server)
 
