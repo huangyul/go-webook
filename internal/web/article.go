@@ -25,6 +25,8 @@ func (a *ArticleHandler) Register(g *gin.Engine) {
 		ug.POST("save", a.Save)
 		ug.POST("publish", a.Publish)
 		ug.GET("withdraw", a.Withdraw)
+		ug.GET("detail/:id", a.Detail)
+		ug.POST("list", a.GetByAuthor)
 	}
 }
 
@@ -96,4 +98,56 @@ func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
 		return
 	}
 	writeSuccess[any](ctx, nil)
+}
+
+func (a *ArticleHandler) Detail(ctx *gin.Context) {
+
+}
+
+func (a *ArticleHandler) GetByAuthor(ctx *gin.Context) {
+	type Req struct {
+		Page     int64 `json:"page"`
+		PageSize int64 `json:"page_size"`
+	}
+	var req Req
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Page < 1 {
+		req.Page = 1
+	}
+	if req.PageSize < 1 {
+		req.PageSize = 10
+	}
+	userId := ctx.MustGet("userId").(int64)
+	arts, err := a.svc.GetByAuthor(ctx, userId, req.Page, req.PageSize)
+	if err != nil {
+		writeError[any](ctx, err)
+		return
+	}
+
+	res := make([]ArtItemRes, 0)
+	for _, art := range arts {
+		res = append(res, ArtItemRes{
+			Id:         art.Id,
+			Title:      art.Title,
+			Content:    art.Content,
+			AuthorId:   art.Author.Id,
+			AuthorName: art.Author.Name,
+			CreateTime: art.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdateTime: art.UpdatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	writeSuccess[[]ArtItemRes](ctx, res)
+}
+
+type ArtItemRes struct {
+	Id         int64  `json:"id"`
+	Title      string `json:"title"`
+	Content    string `json:"content"`
+	AuthorId   int64  `json:"author_id"`
+	AuthorName string `json:"author_name"`
+	CreateTime string `json:"create_time"`
+	UpdateTime string `json:"update_time"`
 }

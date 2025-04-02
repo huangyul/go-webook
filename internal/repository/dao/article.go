@@ -13,6 +13,7 @@ type ArticleDAO interface {
 	UpdateById(ctx context.Context, art *Article) error
 	Sync(ctx context.Context, art *Article) error
 	SyncStatus(ctx context.Context, userId, id int64, status uint8) error
+	GetByAuthorId(ctx context.Context, userId, page, pageSize int64) ([]*Article, error)
 }
 
 var (
@@ -27,6 +28,19 @@ func NewArticleDAO(db *gorm.DB) ArticleDAO {
 
 type GormArticleDAO struct {
 	db *gorm.DB
+}
+
+func (dao *GormArticleDAO) GetByAuthorId(ctx context.Context, userId, page, pageSize int64) ([]*Article, error) {
+	var arts []Article
+	err := dao.db.WithContext(ctx).Model(&Article{}).Where("author_id = ?", userId).Limit(int(pageSize)).Offset(int((page - 1) * pageSize)).Find(&arts).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*Article, 0, len(arts))
+	for _, art := range arts {
+		result = append(result, &art)
+	}
+	return result, nil
 }
 
 func (dao *GormArticleDAO) SyncStatus(ctx context.Context, userId, id int64, status uint8) error {
