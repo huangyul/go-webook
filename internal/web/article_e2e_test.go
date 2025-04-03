@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/huangyul/go-webook/internal/domain"
+	"github.com/huangyul/go-webook/internal/repository/cache"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -59,7 +60,7 @@ func (s *E2ETestSuite) SetupSuite() {
 	s.userId = int64(1)
 
 	// 初始化Gin服务器
-	server := gin.Default()
+	server := gin.New()
 	server.Use(func(ctx *gin.Context) {
 		ctx.Set("userId", s.userId)
 	})
@@ -110,8 +111,12 @@ func (s *ArticleTestSuite) SetupSuite() {
 
 	// 初始化文章相关依赖
 	articleDao := dao.NewArticleDAO(s.db)
-	articleRepo := repository.NewArticleRepository(articleDao)
-	articleService := service.NewArticleService(articleRepo)
+	articleCache := cache.NewArticleCache(s.rdb)
+	articleRepo := repository.NewArticleRepository(articleDao, articleCache)
+	userDao := dao.NewUserDAO(s.db)
+	userCache := cache.NewRedisUserCache(s.rdb)
+	userRepo := repository.NewUserRepository(userDao, userCache)
+	articleService := service.NewArticleService(articleRepo, userRepo)
 	s.articleHandler = NewArticleHandler(articleService)
 
 	// 注册路由

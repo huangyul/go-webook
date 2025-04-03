@@ -19,7 +19,7 @@ func NewArticleHandler(svc service.ArticleService) *ArticleHandler {
 	}
 }
 
-func (a *ArticleHandler) Register(g *gin.Engine) {
+func (a *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 	ug := g.Group("article")
 	{
 		ug.POST("save", a.Save)
@@ -41,7 +41,7 @@ func (a *ArticleHandler) Save(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	userId := ctx.MustGet("userId").(int64)
+	userId := ctx.MustGet("user_id").(int64)
 	_, err := a.svc.Save(ctx, &domain.Article{
 		Id:      req.Id,
 		Title:   req.Title,
@@ -68,7 +68,7 @@ func (a *ArticleHandler) Publish(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	userId := ctx.MustGet("userId").(int64)
+	userId := ctx.MustGet("user_id").(int64)
 	err := a.svc.Publish(ctx, &domain.Article{
 		Id:      req.Id,
 		Title:   req.Title,
@@ -91,7 +91,7 @@ func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
 		writeError[any](ctx, errors.New("illegal id"))
 		return
 	}
-	userId := ctx.MustGet("userId").(int64)
+	userId := ctx.MustGet("user_id").(int64)
 	err = a.svc.WithDraw(ctx, userId, id)
 	if err != nil {
 		writeError[any](ctx, err)
@@ -120,7 +120,7 @@ func (a *ArticleHandler) GetByAuthor(ctx *gin.Context) {
 	if req.PageSize < 1 {
 		req.PageSize = 10
 	}
-	userId := ctx.MustGet("userId").(int64)
+	userId := ctx.MustGet("user_id").(int64)
 	arts, err := a.svc.GetByAuthor(ctx, userId, req.Page, req.PageSize)
 	if err != nil {
 		writeError[any](ctx, err)
@@ -135,6 +135,7 @@ func (a *ArticleHandler) GetByAuthor(ctx *gin.Context) {
 			Content:    art.Content,
 			AuthorId:   art.Author.Id,
 			AuthorName: art.Author.Name,
+			Status:     art.Status.ToUint8(),
 			CreateTime: art.CreatedAt.Format("2006-01-02 15:04:05"),
 			UpdateTime: art.UpdatedAt.Format("2006-01-02 15:04:05"),
 		})
@@ -148,6 +149,7 @@ type ArtItemRes struct {
 	Content    string `json:"content"`
 	AuthorId   int64  `json:"author_id"`
 	AuthorName string `json:"author_name"`
+	Status     uint8  `json:"status"`
 	CreateTime string `json:"create_time"`
 	UpdateTime string `json:"update_time"`
 }

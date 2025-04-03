@@ -38,6 +38,7 @@ func (a *articleRepository) GetByAuthorId(ctx context.Context, userId, page, pag
 			Id:        art.Id,
 			Title:     art.Title,
 			Content:   art.Content,
+			Status:    domain.ArticleStatus(art.Status),
 			CreatedAt: art.CreatedAt,
 			UpdatedAt: art.UpdatedAt,
 			Author: domain.Author{

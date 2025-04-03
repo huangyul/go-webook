@@ -11,12 +11,13 @@ import (
 	"time"
 )
 
-func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine {
+func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler, artHdl *web.ArticleHandler) *gin.Engine {
 	server := gin.Default()
 
 	server.Use(mdls...)
 
 	userHdl.RegisterRoutes(server)
+	artHdl.RegisterRoutes(server)
 
 	return server
 }

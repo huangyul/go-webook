@@ -35,7 +35,12 @@ func InitService() *gin.Engine {
 	codeRepository := repository.NewCodeRepository(codeCache)
 	codeService := service.NewCodeService(smsService, codeRepository)
 	userHandler := web.NewUserHandler(userService, codeService, authzAuthz)
-	engine := ioc.InitWebServer(v, userHandler)
+	articleDAO := dao.NewArticleDAO(db)
+	articleCache := cache.NewArticleCache(cmdable)
+	articleRepository := repository.NewArticleRepository(articleDAO, articleCache)
+	articleService := service.NewArticleService(articleRepository, userRepository)
+	articleHandler := web.NewArticleHandler(articleService)
+	engine := ioc.InitWebServer(v, userHandler, articleHandler)
 	return engine
 }
 
@@ -48,3 +53,5 @@ var userSet = wire.NewSet(dao.NewUserDAO, cache.NewRedisUserCache, repository.Ne
 var codeSet = wire.NewSet(cache.NewCodeCache, repository.NewCodeRepository, service.NewCodeService)
 
 var smsSet = wire.NewSet(sms.NewLocalService)
+
+var articleSet = wire.NewSet(dao.NewArticleDAO, cache.NewArticleCache, repository.NewArticleRepository, service.NewArticleService, web.NewArticleHandler)
