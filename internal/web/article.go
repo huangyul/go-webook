@@ -2,20 +2,28 @@ package web
 
 import (
 	"errors"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/huangyul/go-webook/internal/service"
-	"net/http"
-	"strconv"
+)
+
+const (
+	Biz = "article"
 )
 
 type ArticleHandler struct {
-	svc service.ArticleService
+	svc      service.ArticleService
+	interSvc service.InteractiveService
 }
 
-func NewArticleHandler(svc service.ArticleService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService) *ArticleHandler {
 	return &ArticleHandler{
-		svc: svc,
+		svc:      svc,
+		interSvc: interSvc,
 	}
 }
 
@@ -28,7 +36,7 @@ func (a *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 		ug.GET("detail/:id", a.Detail)
 		ug.POST("list", a.GetByAuthor)
 
-		pug := g.Group("pub")
+		pug := ug.Group("pub")
 		{
 			pug.GET("/detail/:id", a.PubDetail)
 		}
@@ -107,7 +115,19 @@ func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
 }
 
 func (a *ArticleHandler) Detail(ctx *gin.Context) {
-
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writeError[any](ctx, errors.New("illegal id"))
+		return
+	}
+	userId := ctx.MustGet("user_id").(int64)
+	art, err := a.svc.GetById(ctx, id, userId)
+	if err != nil {
+		writeError[any](ctx, err)
+		return
+	}
+	writeSuccess[ArtItemRes](ctx, a.toResItem(art))
 }
 
 func (a *ArticleHandler) GetByAuthor(ctx *gin.Context) {
@@ -135,22 +155,28 @@ func (a *ArticleHandler) GetByAuthor(ctx *gin.Context) {
 
 	res := make([]ArtItemRes, 0)
 	for _, art := range arts {
-		res = append(res, ArtItemRes{
-			Id:         art.Id,
-			Title:      art.Title,
-			Content:    art.Content,
-			AuthorId:   art.Author.Id,
-			AuthorName: art.Author.Name,
-			Status:     art.Status.ToUint8(),
-			CreateTime: art.CreatedAt.Format("2006-01-02 15:04:05"),
-			UpdateTime: art.UpdatedAt.Format("2006-01-02 15:04:05"),
-		})
+		res = append(res, a.toResItem(art))
 	}
 	writeSuccess[[]ArtItemRes](ctx, res)
 }
 
 func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
-
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writeError[any](ctx, errors.New("illegal id"))
+		return
+	}
+	userId := ctx.MustGet("user_id").(int64)
+	art, err := a.svc.GetPudById(ctx, id, userId)
+	if err != nil {
+		writeError[any](ctx, err)
+		return
+	}
+	go func() {
+		_ = a.interSvc.IncrReadCnt(ctx, Biz, art.Id)
+	}()
+	writeSuccess[ArtItemRes](ctx, a.toResItem(art))
 }
 
 type ArtItemRes struct {
@@ -162,4 +188,17 @@ type ArtItemRes struct {
 	Status     uint8  `json:"status"`
 	CreateTime string `json:"create_time"`
 	UpdateTime string `json:"update_time"`
+}
+
+func (a *ArticleHandler) toResItem(art *domain.Article) ArtItemRes {
+	return ArtItemRes{
+		Id:         art.Id,
+		Title:      art.Title,
+		Content:    art.Content,
+		AuthorId:   art.Author.Id,
+		AuthorName: art.Author.Name,
+		Status:     art.Status.ToUint8(),
+		CreateTime: art.CreatedAt.Format(time.DateTime),
+		UpdateTime: art.UpdatedAt.Format(time.DateTime),
+	}
 }

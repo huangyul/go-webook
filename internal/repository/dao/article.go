@@ -35,13 +35,13 @@ type GormArticleDAO struct {
 
 func (dao *GormArticleDAO) GetById(ctx context.Context, id int64, userId int64) (*Article, error) {
 	var art Article
-	err := dao.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userId).First(&art).Error
+	err := dao.db.WithContext(ctx).Where("id = ? AND author_id = ?", id, userId).First(&art).Error
 	return &art, err
 }
 
 func (dao *GormArticleDAO) GetPubById(ctx context.Context, id int64, userId int64) (*Article, error) {
 	var art PubArticle
-	err := dao.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userId).First(&art).Error
+	err := dao.db.WithContext(ctx).Where("id = ? AND author_id = ?", id, userId).First(&art).Error
 	result := Article(art)
 	return &result, err
 }

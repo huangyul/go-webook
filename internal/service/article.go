@@ -12,11 +12,21 @@ type ArticleService interface {
 	Publish(ctx context.Context, art *domain.Article) error
 	WithDraw(ctx context.Context, userId, id int64) error
 	GetByAuthor(ctx context.Context, userId, page, pageSize int64) ([]*domain.Article, error)
+	GetById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
+	GetPudById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
 }
 
 type articleService struct {
 	repo     repository.ArticleRepository
 	userRepo repository.UserRepository
+}
+
+func (svc *articleService) GetById(ctx context.Context, id int64, userId int64) (*domain.Article, error) {
+	return svc.repo.GetById(ctx, id, userId)
+}
+
+func (svc *articleService) GetPudById(ctx context.Context, id int64, userId int64) (*domain.Article, error) {
+	return svc.repo.GetPubById(ctx, id, userId)
 }
 
 func (svc *articleService) GetByAuthor(ctx context.Context, userId, page, pageSize int64) ([]*domain.Article, error) {

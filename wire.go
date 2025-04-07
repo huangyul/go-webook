@@ -43,6 +43,13 @@ var articleSet = wire.NewSet(
 	web.NewArticleHandler,
 )
 
+var interactiveSet = wire.NewSet(
+	dao.NewInteractiveDAO,
+	cache.NewInteractiveCache,
+	repository.NewInteractiveRepository,
+	service.NewInteractiveService,
+)
+
 func InitService() *gin.Engine {
 	wire.Build(
 		thirdPartySet,
@@ -51,6 +58,7 @@ func InitService() *gin.Engine {
 		codeSet,
 		smsSet,
 		articleSet,
+		interactiveSet,
 
 		authz.NewAuthz,
 
