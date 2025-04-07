@@ -3,17 +3,20 @@ package dao
 import (
 	"context"
 	"errors"
+	"time"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"time"
 )
 
 type ArticleDAO interface {
 	Insert(ctx context.Context, art *Article) (int64, error)
 	UpdateById(ctx context.Context, art *Article) error
 	Sync(ctx context.Context, art *Article) error
-	SyncStatus(ctx context.Context, userId, id int64, status uint8) error
+	SyncStatus(ctx context.Context, userId, id int64, status uint8) (*Article, error)
 	GetByAuthorId(ctx context.Context, userId, page, pageSize int64) ([]*Article, error)
+	GetById(ctx context.Context, id int64, userId int64) (*Article, error)
+	GetPubById(ctx context.Context, id int64, userId int64) (*Article, error)
 }
 
 var (
@@ -30,6 +33,19 @@ type GormArticleDAO struct {
 	db *gorm.DB
 }
 
+func (dao *GormArticleDAO) GetById(ctx context.Context, id int64, userId int64) (*Article, error) {
+	var art Article
+	err := dao.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userId).First(&art).Error
+	return &art, err
+}
+
+func (dao *GormArticleDAO) GetPubById(ctx context.Context, id int64, userId int64) (*Article, error) {
+	var art PubArticle
+	err := dao.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userId).First(&art).Error
+	result := Article(art)
+	return &result, err
+}
+
 func (dao *GormArticleDAO) GetByAuthorId(ctx context.Context, userId, page, pageSize int64) ([]*Article, error) {
 	var arts []Article
 	err := dao.db.WithContext(ctx).Model(&Article{}).Where("author_id = ?", userId).Limit(int(pageSize)).Offset(int((page - 1) * pageSize)).Find(&arts).Error
@@ -43,9 +59,10 @@ func (dao *GormArticleDAO) GetByAuthorId(ctx context.Context, userId, page, page
 	return result, nil
 }
 
-func (dao *GormArticleDAO) SyncStatus(ctx context.Context, userId, id int64, status uint8) error {
+func (dao *GormArticleDAO) SyncStatus(ctx context.Context, userId, id int64, status uint8) (*Article, error) {
 	now := time.Now()
-	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var art PubArticle
+	err := dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&Article{}).Where("id = ? AND author_id = ?", id, userId).Updates(map[string]interface{}{
 			"status":     status,
 			"created_at": now,
@@ -56,11 +73,21 @@ func (dao *GormArticleDAO) SyncStatus(ctx context.Context, userId, id int64, sta
 		if res.RowsAffected == 0 {
 			return ErrArticleNotFound
 		}
-		return tx.Model(&PubArticle{}).Where("id = ? AND author_id = ?", id, userId).Updates(map[string]interface{}{
+		err := tx.Model(&PubArticle{}).Where("id = ? AND author_id = ?", id, userId).Updates(map[string]interface{}{
 			"status":     status,
 			"created_at": now,
 		}).Error
+		if err != nil {
+			return err
+		}
+		dao.db.WithContext(ctx).Where("id = ? AND author_id = ?", id, userId).First(&art)
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	pubArt := Article(art)
+	return &pubArt, nil
 }
 
 func (dao *GormArticleDAO) Sync(ctx context.Context, art *Article) error {

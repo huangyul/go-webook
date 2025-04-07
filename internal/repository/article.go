@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+
 	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/huangyul/go-webook/internal/repository/cache"
 	"github.com/huangyul/go-webook/internal/repository/dao"
@@ -13,11 +14,45 @@ type ArticleRepository interface {
 	Sync(ctx context.Context, art *domain.Article) error
 	SyncStatus(ctx context.Context, userId, id int64, status domain.ArticleStatus) error
 	GetByAuthorId(ctx context.Context, userId, page, pageSize int64) ([]*domain.Article, error)
+	GetById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
+	GetPubById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
 }
 
 type articleRepository struct {
 	dao   dao.ArticleDAO
 	cache cache.ArticleCache
+}
+
+// GetById
+func (a *articleRepository) GetById(ctx context.Context, id int64, userId int64) (*domain.Article, error) {
+	dArt, err := a.cache.GetById(ctx, id, userId)
+	if err == nil {
+		return dArt, nil
+	}
+	art, err := a.dao.GetById(ctx, id, userId)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		_ = a.cache.SetById(ctx, id, a.toDomain(art))
+	}()
+	return a.toDomain(art), nil
+}
+
+// GetPubById
+func (a *articleRepository) GetPubById(ctx context.Context, id int64, userId int64) (*domain.Article, error) {
+	dArt, err := a.cache.GetPubById(ctx, id, userId)
+	if err == nil {
+		return dArt, nil
+	}
+	art, err := a.dao.GetPubById(ctx, id, userId)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		_ = a.cache.SetPubById(ctx, id, a.toDomain(art))
+	}()
+	return a.toDomain(art), nil
 }
 
 func (a *articleRepository) GetByAuthorId(ctx context.Context, userId, page, pageSize int64) ([]*domain.Article, error) {
@@ -55,7 +90,16 @@ func (a *articleRepository) GetByAuthorId(ctx context.Context, userId, page, pag
 }
 
 func (a *articleRepository) SyncStatus(ctx context.Context, userId, id int64, status domain.ArticleStatus) error {
-	return a.dao.SyncStatus(ctx, userId, id, status.ToUint8())
+	art, err := a.dao.SyncStatus(ctx, userId, id, status.ToUint8())
+	if err != nil {
+		return err
+	}
+	go func() {
+		if status == domain.ArticleStatusPublished {
+			_ = a.cache.SetPubById(ctx, id, a.toDomain(art))
+		}
+	}()
+	return nil
 }
 
 func (a *articleRepository) Insert(ctx context.Context, art *domain.Article) (int64, error) {

@@ -27,6 +27,12 @@ func (a *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 		ug.GET("withdraw", a.Withdraw)
 		ug.GET("detail/:id", a.Detail)
 		ug.POST("list", a.GetByAuthor)
+
+		pug := g.Group("pub")
+		{
+			pug.GET("/detail/:id", a.PubDetail)
+		}
+
 	}
 }
 
@@ -141,6 +147,10 @@ func (a *ArticleHandler) GetByAuthor(ctx *gin.Context) {
 		})
 	}
 	writeSuccess[[]ArtItemRes](ctx, res)
+}
+
+func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
+
 }
 
 type ArtItemRes struct {
