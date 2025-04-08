@@ -10,6 +10,8 @@ type InteractiveService interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	Like(ctx context.Context, biz string, bizId int64, userId int64) error
 	CancelLike(ctx context.Context, biz string, bizId int64, userId int64) error
+	Collect(ctx context.Context, biz string, bizId int64, userId int64) error
+	CancelCollect(ctx context.Context, biz string, bizId int64, userId int64) error
 }
 
 func NewInteractiveService(repo repository.InteractiveRepository) InteractiveService {
@@ -20,6 +22,14 @@ func NewInteractiveService(repo repository.InteractiveRepository) InteractiveSer
 
 type InteractiveServiceImpl struct {
 	repo repository.InteractiveRepository
+}
+
+func (svc *InteractiveServiceImpl) Collect(ctx context.Context, biz string, bizId int64, userId int64) error {
+	return svc.repo.IncrCollect(ctx, biz, bizId, userId)
+}
+
+func (svc *InteractiveServiceImpl) CancelCollect(ctx context.Context, biz string, bizId int64, userId int64) error {
+	return svc.repo.DecrCollect(ctx, biz, bizId, userId)
 }
 
 func (svc *InteractiveServiceImpl) Like(ctx context.Context, biz string, bizId int64, userId int64) error {

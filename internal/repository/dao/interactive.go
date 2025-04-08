@@ -11,6 +11,8 @@ type InteractiveDAO interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	InsertLikeInfo(ctx context.Context, biz string, bizId int64, userId int64) error
 	DeleteLikeInfo(ctx context.Context, biz string, bizId int64, userId int64) error
+	AddCollectBiz(ctx context.Context, biz string, bizId, userId int64) error
+	DelCollectBiz(ctx context.Context, biz string, bizId int64, userId int64) error
 }
 
 func NewInteractiveDAO(db *gorm.DB) InteractiveDAO {
@@ -21,6 +23,48 @@ func NewInteractiveDAO(db *gorm.DB) InteractiveDAO {
 
 type GormInteractiveDAO struct {
 	db *gorm.DB
+}
+
+func (dao *GormInteractiveDAO) AddCollectBiz(ctx context.Context, biz string, bizId, userId int64) error {
+	now := time.Now()
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Create(&UserCollectBiz{
+			UserId:    userId,
+			BizId:     bizId,
+			Biz:       biz,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}).Error
+		if err != nil {
+			return err
+		}
+		return tx.Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"updated_at":  now,
+				"collect_cnt": gorm.Expr("collect_cnt + ?", 1),
+			}),
+		}).Create(&Interactive{
+			BizId:      bizId,
+			Biz:        biz,
+			CollectCnt: 1,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}).Error
+	})
+}
+
+func (dao *GormInteractiveDAO) DelCollectBiz(ctx context.Context, biz string, bizId int64, userId int64) error {
+	now := time.Now()
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Where("biz_id = ? and user_id = ? and biz = ?", bizId, userId, biz).Delete(&UserCollectBiz{}).Error
+		if err != nil {
+			return err
+		}
+		return tx.Model(&Interactive{}).Where("biz_id = ? and biz = ?", bizId, biz).Updates(map[string]interface{}{
+			"updated_at":  now,
+			"collect_cnt": gorm.Expr("collect_cnt - ?", 1),
+		}).Error
+	})
 }
 
 func (dao *GormInteractiveDAO) InsertLikeInfo(ctx context.Context, biz string, bizId int64, userId int64) error {
@@ -107,6 +151,15 @@ type UserLikeBiz struct {
 	UserId    int64     `gorm:"column:user_id;uniqueIndex:idx_biz_id_user_id_biz;"`
 	Biz       string    `gorm:"column:biz;uniqueIndex:idx_biz_id_user_id_biz;type:varchar(128)"`
 	Status    int       `gorm:"column:status;common:'0/取消点赞；1/点赞'"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+}
+
+type UserCollectBiz struct {
+	Id        int64     `gorm:"primary_key;auto_increment"`
+	BizId     int64     `gorm:"uniqueIndex:idx_biz_id_user_id_biz;"`
+	UserId    int64     `gorm:"uniqueIndex:idx_biz_id_user_id_biz;"`
+	Biz       string    `gorm:"uniqueIndex:idx_biz_id_user_id_biz;type:varchar(128)"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
 }

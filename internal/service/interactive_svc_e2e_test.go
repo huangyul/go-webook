@@ -51,6 +51,7 @@ func (s *TestSuite) SetupSuite() {
 func (s *TestSuite) TearDownTest() {
 	s.db.Exec("TRUNCATE TABLE `interactives`")
 	s.db.Exec("TRUNCATE TABLE `user_like_bizs`")
+	s.db.Exec("TRUNCATE TABLE `user_collect_bizs`")
 	s.rdb.Del(context.Background(), fmt.Sprintf("interactive:%s:%d", s.biz, s.bizId))
 }
 
@@ -129,6 +130,70 @@ func (s *InteractiveSuite) TestInteractiveLike() {
 		s.T().Run(tt.name, func(t *testing.T) {
 			tt.before(t)
 			err := s.svc.Like(context.Background(), s.biz, s.bizId, s.userId)
+			assert.NoError(t, err)
+			tt.after(t)
+		})
+	}
+}
+
+func (s *InteractiveSuite) TestInteractiveCollect() {
+	tests := []struct {
+		name    string
+		before  func(t *testing.T)
+		after   func(t *testing.T)
+		wantErr error
+	}{
+		{
+			name:   "success1",
+			before: func(t *testing.T) {},
+			after: func(t *testing.T) {
+				var inter dao.Interactive
+				err := s.db.Where("biz_id = ? and biz = ?", s.bizId, s.biz).First(&inter).Error
+				assert.NoError(t, err)
+				assert.Equal(t, int64(1), inter.CollectCnt)
+				var userCollectBiz dao.UserCollectBiz
+				err = s.db.Where("biz_id = ? and biz = ? and user_id = ?", s.bizId, s.biz, s.userId).First(&userCollectBiz).Error
+				assert.NoError(t, err)
+			},
+			wantErr: nil,
+		},
+		{
+			name: "success2",
+			before: func(t *testing.T) {
+				err := s.db.Model(&dao.Interactive{}).Create(&dao.Interactive{
+					BizId:      s.bizId,
+					Biz:        s.biz,
+					CollectCnt: 10,
+					CreatedAt:  time.Now(),
+					UpdatedAt:  time.Now(),
+				}).Error
+				assert.NoError(t, err)
+				err = s.db.Model(&dao.UserCollectBiz{}).Create(&dao.UserCollectBiz{
+					BizId:     s.bizId,
+					Biz:       s.biz,
+					UserId:    s.userId,
+					CreatedAt: time.Now(),
+					UpdatedAt: time.Now(),
+				}).Error
+				assert.NoError(t, err)
+			},
+			after: func(t *testing.T) {
+				var inter dao.Interactive
+				err := s.db.Where("biz_id = ? and biz = ?", s.bizId, s.biz).First(&inter).Error
+				assert.NoError(t, err)
+				assert.Equal(t, int64(11), inter.CollectCnt)
+				var userCollectBiz dao.UserCollectBiz
+				err = s.db.Where("biz_id = ? and biz = ? and user_id = ?", s.bizId, s.biz, s.userId).First(&userCollectBiz).Error
+				assert.NoError(t, err)
+			},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		s.T().Run(tt.name, func(t *testing.T) {
+			tt.before(t)
+			err := s.svc.Collect(context.Background(), s.biz, s.bizId, s.userId)
 			assert.NoError(t, err)
 			tt.after(t)
 		})

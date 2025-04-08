@@ -11,6 +11,8 @@ type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	IncrLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
 	DecrLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
+	IncrCollect(ctx context.Context, biz string, bizId int64, userId int64) error
+	DecrCollect(ctx context.Context, biz string, bizId int64, userId int64) error
 }
 
 func NewInteractiveRepository(dao dao.InteractiveDAO, cache cache.InteractiveCache) InteractiveRepository {
@@ -23,6 +25,22 @@ func NewInteractiveRepository(dao dao.InteractiveDAO, cache cache.InteractiveCac
 type InteractiveRepositoryImpl struct {
 	dao   dao.InteractiveDAO
 	cache cache.InteractiveCache
+}
+
+func (repo *InteractiveRepositoryImpl) IncrCollect(ctx context.Context, biz string, bizId int64, userId int64) error {
+	err := repo.dao.AddCollectBiz(ctx, biz, bizId, userId)
+	if err != nil {
+		return err
+	}
+	return repo.cache.IncrCollectCntIfPresent(ctx, biz, bizId)
+}
+
+func (repo *InteractiveRepositoryImpl) DecrCollect(ctx context.Context, biz string, bizId int64, userId int64) error {
+	err := repo.dao.DelCollectBiz(ctx, biz, bizId, userId)
+	if err != nil {
+		return err
+	}
+	return repo.cache.DecrCollectCntIfPresent(ctx, biz, bizId)
 }
 
 func (repo *InteractiveRepositoryImpl) IncrLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error {

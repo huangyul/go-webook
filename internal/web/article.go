@@ -40,6 +40,7 @@ func (a *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 		{
 			pug.GET("/detail/:id", a.PubDetail)
 			pug.POST("like", a.Like)
+			pug.POST("collect", a.Collect)
 		}
 
 	}
@@ -220,6 +221,30 @@ func (a *ArticleHandler) Like(ctx *gin.Context) {
 		err = a.interSvc.Like(ctx, Biz, req.Id, userId)
 	} else {
 		err = a.interSvc.CancelLike(ctx, Biz, req.Id, userId)
+	}
+	if err != nil {
+		writeError[any](ctx, err)
+		return
+	}
+	writeSuccess[any](ctx, nil)
+}
+
+func (a *ArticleHandler) Collect(ctx *gin.Context) {
+	type Req struct {
+		Id      int64 `json:"id" binding:"required"`
+		Collect bool  `json:"collect" binding:"required"`
+	}
+	var req Req
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	userId := ctx.MustGet("user_id").(int64)
+	var err error
+	if req.Collect {
+		err = a.interSvc.Collect(ctx, Biz, req.Id, userId)
+	} else {
+		err = a.interSvc.CancelCollect(ctx, Biz, req.Id, userId)
 	}
 	if err != nil {
 		writeError[any](ctx, err)
