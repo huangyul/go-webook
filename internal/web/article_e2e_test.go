@@ -117,10 +117,10 @@ func (s *ArticleTestSuite) SetupSuite() {
 	userCache := cache.NewRedisUserCache(s.rdb)
 	userRepo := repository.NewUserRepository(userDao, userCache)
 	articleService := service.NewArticleService(articleRepo, userRepo)
-	s.articleHandler = NewArticleHandler(articleService)
+	s.articleHandler = NewArticleHandler(articleService, nil)
 
 	// 注册路由
-	s.articleHandler.Register(s.server)
+	s.articleHandler.RegisterRoutes(s.server)
 }
 
 // TestArticleSave

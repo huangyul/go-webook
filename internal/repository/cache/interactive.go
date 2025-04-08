@@ -18,6 +18,8 @@ const (
 
 type InteractiveCache interface {
 	IncrReadCntIfPresent(ctx context.Context, biz string, bizId int64) error
+	IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
+	DecrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
 }
 
 func NewInteractiveCache(rds redis.Cmdable) InteractiveCache {
@@ -30,8 +32,16 @@ type RedisInteractiveCache struct {
 	rds redis.Cmdable
 }
 
-func (cache *RedisInteractiveCache) IncrReadCntIfPresent(ctx context.Context, biz string, bizId int64) error {
+func (cache *RedisInteractiveCache) IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error {
 	return cache.rds.Eval(ctx, IncrCntScript, []string{cache.key(biz, bizId)}, ReadBiz, 1).Err()
+}
+
+func (cache *RedisInteractiveCache) DecrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error {
+	return cache.rds.Eval(ctx, IncrCntScript, []string{cache.key(biz, bizId)}, LikeBiz, -1).Err()
+}
+
+func (cache *RedisInteractiveCache) IncrReadCntIfPresent(ctx context.Context, biz string, bizId int64) error {
+	return cache.rds.Eval(ctx, IncrCntScript, []string{cache.key(biz, bizId)}, LikeBiz, 1).Err()
 }
 
 func (cache *RedisInteractiveCache) key(biz string, bizId int64) string {

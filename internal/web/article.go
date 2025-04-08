@@ -39,6 +39,7 @@ func (a *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 		pug := ug.Group("pub")
 		{
 			pug.GET("/detail/:id", a.PubDetail)
+			pug.POST("like", a.Like)
 		}
 
 	}
@@ -201,4 +202,28 @@ func (a *ArticleHandler) toResItem(art *domain.Article) ArtItemRes {
 		CreateTime: art.CreatedAt.Format(time.DateTime),
 		UpdateTime: art.UpdatedAt.Format(time.DateTime),
 	}
+}
+
+func (a *ArticleHandler) Like(ctx *gin.Context) {
+	type Req struct {
+		Id   int64 `json:"id" binding:"required"`
+		Like bool  `json:"like" binding:"required"`
+	}
+	var req Req
+	if err := ctx.ShouldBind(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	userId := ctx.MustGet("user_id").(int64)
+	var err error
+	if req.Like {
+		err = a.interSvc.Like(ctx, Biz, req.Id, userId)
+	} else {
+		err = a.interSvc.CancelLike(ctx, Biz, req.Id, userId)
+	}
+	if err != nil {
+		writeError[any](ctx, err)
+		return
+	}
+	writeSuccess[any](ctx, nil)
 }
