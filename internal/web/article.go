@@ -178,7 +178,19 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 	go func() {
 		_ = a.interSvc.IncrReadCnt(ctx, Biz, art.Id)
 	}()
-	writeSuccess[ArtItemRes](ctx, a.toResItem(art))
+	res := a.toResItem(art)
+	inter, err := a.interSvc.Get(ctx, Biz, res.Id, userId)
+	if err != nil {
+		writeError[any](ctx, err)
+		return
+	}
+	res.CollectCnt = inter.CollectCnt
+	res.LikeCnt = inter.LikeCnt
+	res.ReadCnt = inter.ReadCnt
+	res.Liked = inter.Liked
+	res.Collected = inter.Collectd
+
+	writeSuccess[ArtItemRes](ctx, res)
 }
 
 type ArtItemRes struct {
@@ -188,6 +200,11 @@ type ArtItemRes struct {
 	AuthorId   int64  `json:"author_id"`
 	AuthorName string `json:"author_name"`
 	Status     uint8  `json:"status"`
+	CollectCnt int64  `json:"collect_cnt"`
+	LikeCnt    int64  `json:"like_cnt"`
+	ReadCnt    int64  `json:"read_cnt"`
+	Liked      bool   `json:"liked"`
+	Collected  bool   `json:"collected"`
 	CreateTime string `json:"create_time"`
 	UpdateTime string `json:"update_time"`
 }
@@ -232,7 +249,7 @@ func (a *ArticleHandler) Like(ctx *gin.Context) {
 func (a *ArticleHandler) Collect(ctx *gin.Context) {
 	type Req struct {
 		Id      int64 `json:"id" binding:"required"`
-		Collect bool  `json:"collect" binding:"required"`
+		Collect bool  `json:"collect"`
 	}
 	var req Req
 	if err := ctx.ShouldBind(&req); err != nil {

@@ -3,8 +3,11 @@ package cache
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
+	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/redis/go-redis/v9"
+	"time"
 )
 
 //go:embed lua/incr_cnt.lua
@@ -22,6 +25,8 @@ type InteractiveCache interface {
 	DecrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	IncrCollectCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	DecrCollectCntIfPresent(ctx context.Context, biz string, bizId int64) error
+	Set(ctx context.Context, biz string, bizId int64, inter *domain.Interactive) error
+	Get(ctx context.Context, biz string, bizId int64) (*domain.Interactive, error)
 }
 
 func NewInteractiveCache(rds redis.Cmdable) InteractiveCache {
@@ -32,6 +37,29 @@ func NewInteractiveCache(rds redis.Cmdable) InteractiveCache {
 
 type RedisInteractiveCache struct {
 	rds redis.Cmdable
+}
+
+func (cache *RedisInteractiveCache) Set(ctx context.Context, biz string, bizId int64, inter *domain.Interactive) error {
+	key := cache.key(biz, bizId)
+	err := cache.rds.HSet(ctx, key, ReadBiz, inter.ReadCnt, LikeBiz, inter.LikeCnt, CollectBiz, inter.CollectCnt).Err()
+	if err != nil {
+		return err
+	}
+	return cache.rds.Expire(ctx, key, time.Minute*15).Err()
+}
+
+func (cache *RedisInteractiveCache) Get(ctx context.Context, biz string, bizId int64) (*domain.Interactive, error) {
+	key := cache.key(biz, bizId)
+	val, err := cache.rds.HGet(ctx, key, ReadBiz).Result()
+	if err != nil {
+		return nil, err
+	}
+	var inter *domain.Interactive
+	err = json.Unmarshal([]byte(val), &inter)
+	if err != nil {
+		return nil, err
+	}
+	return inter, nil
 }
 
 func (cache *RedisInteractiveCache) IncrCollectCntIfPresent(ctx context.Context, biz string, bizId int64) error {
