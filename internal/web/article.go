@@ -170,14 +170,11 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 		return
 	}
 	userId := ctx.MustGet("user_id").(int64)
-	art, err := a.svc.GetPudById(ctx, id, userId)
+	art, err := a.svc.GetPudById(ctx, id, userId, Biz)
 	if err != nil {
 		writeError[any](ctx, err)
 		return
 	}
-	go func() {
-		_ = a.interSvc.IncrReadCnt(ctx, Biz, art.Id)
-	}()
 	res := a.toResItem(art)
 	inter, err := a.interSvc.Get(ctx, Biz, res.Id, userId)
 	if err != nil {

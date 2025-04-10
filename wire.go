@@ -3,8 +3,8 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	articleEvents "github.com/huangyul/go-webook/internal/events/article"
 	"github.com/huangyul/go-webook/internal/pkg/authz"
 	"github.com/huangyul/go-webook/internal/repository"
 	"github.com/huangyul/go-webook/internal/repository/cache"
@@ -17,7 +17,10 @@ import (
 
 var thirdPartySet = wire.NewSet(
 	ioc.InitDB,
-	ioc.InitRedis)
+	ioc.InitRedis,
+	ioc.InitSaramaClient,
+	ioc.InitSaramaProducer,
+	ioc.InitConsumers)
 
 var userSet = wire.NewSet(
 	dao.NewUserDAO,
@@ -50,7 +53,7 @@ var interactiveSet = wire.NewSet(
 	service.NewInteractiveService,
 )
 
-func InitService() *gin.Engine {
+func InitApp() *App {
 	wire.Build(
 		thirdPartySet,
 
@@ -62,9 +65,13 @@ func InitService() *gin.Engine {
 
 		authz.NewAuthz,
 
+		articleEvents.NewArticleReadProducer,
+		articleEvents.NewArticleReadConsumer,
 		ioc.InitMiddlewares,
 		ioc.InitWebServer,
+
+		wire.Struct(new(App), "*"),
 	)
 
-	return gin.Default()
+	return new(App)
 }

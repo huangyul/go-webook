@@ -6,8 +6,16 @@ import (
 
 func main() {
 	initViper()
-	server := InitService()
-	err := server.Run("127.0.0.1:8088")
+	app := InitApp()
+
+	for _, cc := range app.consumers {
+		err := cc.Start()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err := app.server.Run("127.0.0.1:8088")
 	if err != nil {
 		panic(err)
 	}

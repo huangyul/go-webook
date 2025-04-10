@@ -7,8 +7,8 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	"github.com/huangyul/go-webook/internal/events/article"
 	"github.com/huangyul/go-webook/internal/pkg/authz"
 	"github.com/huangyul/go-webook/internal/repository"
 	"github.com/huangyul/go-webook/internal/repository/cache"
@@ -21,7 +21,7 @@ import (
 
 // Injectors from wire.go:
 
-func InitService() *gin.Engine {
+func InitApp() *App {
 	cmdable := ioc.InitRedis()
 	authzAuthz := authz.NewAuthz(cmdable)
 	v := ioc.InitMiddlewares(cmdable, authzAuthz)
@@ -38,19 +38,28 @@ func InitService() *gin.Engine {
 	articleDAO := dao.NewArticleDAO(db)
 	articleCache := cache.NewArticleCache(cmdable)
 	articleRepository := repository.NewArticleRepository(articleDAO, articleCache)
-	articleService := service.NewArticleService(articleRepository, userRepository)
+	client := ioc.InitSaramaClient()
+	syncProducer := ioc.InitSaramaProducer(client)
+	readProducer := article.NewArticleReadProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, userRepository, readProducer)
 	interactiveDAO := dao.NewInteractiveDAO(db)
 	interactiveCache := cache.NewInteractiveCache(cmdable)
 	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache)
 	interactiveService := service.NewInteractiveService(interactiveRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactiveService)
 	engine := ioc.InitWebServer(v, userHandler, articleHandler)
-	return engine
+	articleReadConsumer := article.NewArticleReadConsumer(client, interactiveRepository)
+	v2 := ioc.InitConsumers(articleReadConsumer)
+	app := &App{
+		server:    engine,
+		consumers: v2,
+	}
+	return app
 }
 
 // wire.go:
 
-var thirdPartySet = wire.NewSet(ioc.InitDB, ioc.InitRedis)
+var thirdPartySet = wire.NewSet(ioc.InitDB, ioc.InitRedis, ioc.InitSaramaClient, ioc.InitSaramaProducer, ioc.InitConsumers)
 
 var userSet = wire.NewSet(dao.NewUserDAO, cache.NewRedisUserCache, repository.NewUserRepository, service.NewUserService, web.NewUserHandler)
 
