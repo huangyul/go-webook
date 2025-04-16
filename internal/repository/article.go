@@ -16,11 +16,20 @@ type ArticleRepository interface {
 	GetByAuthorId(ctx context.Context, userId, page, pageSize int64) ([]*domain.Article, error)
 	GetById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
 	GetPubById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
+	GetPudDetailById(ctx context.Context, id int64) (*domain.Article, error)
 }
 
 type articleRepository struct {
 	dao   dao.ArticleDAO
 	cache cache.ArticleCache
+}
+
+func (a *articleRepository) GetPudDetailById(ctx context.Context, id int64) (*domain.Article, error) {
+	res, err := a.dao.GetPudDetailById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return a.toDomain(res), nil
 }
 
 // GetById

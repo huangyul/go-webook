@@ -16,14 +16,16 @@ const (
 )
 
 type ArticleHandler struct {
-	svc      service.ArticleService
-	interSvc service.InteractiveService
+	svc        service.ArticleService
+	interSvc   service.InteractiveService
+	historySvc service.HistoryService
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, historySvc service.HistoryService) *ArticleHandler {
 	return &ArticleHandler{
-		svc:      svc,
-		interSvc: interSvc,
+		svc:        svc,
+		interSvc:   interSvc,
+		historySvc: historySvc,
 	}
 }
 
@@ -41,6 +43,7 @@ func (a *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 			pug.GET("/detail/:id", a.PubDetail)
 			pug.POST("like", a.Like)
 			pug.POST("collect", a.Collect)
+			pug.GET("history", a.History)
 		}
 
 	}
@@ -265,4 +268,33 @@ func (a *ArticleHandler) Collect(ctx *gin.Context) {
 		return
 	}
 	writeSuccess[any](ctx, nil)
+}
+
+func (a *ArticleHandler) History(ctx *gin.Context) {
+	userId := ctx.MustGet("user_id").(int64)
+	res, err := a.historySvc.GetListByUserId(ctx, userId)
+	if err != nil {
+		writeError[any](ctx, err)
+		return
+	}
+	type Resp struct {
+		Id         int64  `json:"id"`
+		Title      string `json:"title"`
+		ArticleId  int64  `json:"article_id"`
+		AuthorName string `json:"author_name"`
+		AuthorId   int64  `json:"author_id"`
+		CreatedAt  string `json:"created_at"`
+	}
+	var resp []Resp
+	for _, item := range res {
+		resp = append(resp, Resp{
+			Id:         item.Id,
+			Title:      item.ArticleTitle,
+			ArticleId:  item.ArticleId,
+			AuthorName: item.AuthorName,
+			AuthorId:   item.AuthorId,
+			CreatedAt:  item.CreatedAt.Format(time.DateTime),
+		})
+	}
+	writeSuccess[[]Resp](ctx, resp)
 }

@@ -17,6 +17,7 @@ type ArticleDAO interface {
 	GetByAuthorId(ctx context.Context, userId, page, pageSize int64) ([]*Article, error)
 	GetById(ctx context.Context, id int64, userId int64) (*Article, error)
 	GetPubById(ctx context.Context, id int64, userId int64) (*Article, error)
+	GetPudDetailById(ctx context.Context, id int64) (*Article, error)
 }
 
 var (
@@ -31,6 +32,18 @@ func NewArticleDAO(db *gorm.DB) ArticleDAO {
 
 type GormArticleDAO struct {
 	db *gorm.DB
+}
+
+func (dao *GormArticleDAO) GetPudDetailById(ctx context.Context, id int64) (*Article, error) {
+	var res Article
+	err := dao.db.WithContext(ctx).First(&res, "id = ?", id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrArticleNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
 }
 
 func (dao *GormArticleDAO) GetById(ctx context.Context, id int64, userId int64) (*Article, error) {

@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
-	"github.com/huangyul/go-webook/internal/events/article"
-
 	"github.com/huangyul/go-webook/internal/domain"
+	"github.com/huangyul/go-webook/internal/events/article"
+	"github.com/huangyul/go-webook/internal/events/history"
 	"github.com/huangyul/go-webook/internal/repository"
+	"golang.org/x/sync/errgroup"
+	"log"
 )
 
 type ArticleService interface {
@@ -14,13 +16,19 @@ type ArticleService interface {
 	WithDraw(ctx context.Context, userId, id int64) error
 	GetByAuthor(ctx context.Context, userId, page, pageSize int64) ([]*domain.Article, error)
 	GetById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
+	GetPudDetailById(ctx context.Context, id int64) (*domain.Article, error)
 	GetPudById(ctx context.Context, id int64, userId int64, biz string) (*domain.Article, error)
 }
 
 type articleService struct {
-	repo     repository.ArticleRepository
-	userRepo repository.UserRepository
-	producer article.ReadProducer
+	repo            repository.ArticleRepository
+	userRepo        repository.UserRepository
+	producer        article.ReadProducer
+	historyProducer history.Producer
+}
+
+func (svc *articleService) GetPudDetailById(ctx context.Context, id int64) (*domain.Article, error) {
+	return svc.repo.GetPudDetailById(ctx, id)
 }
 
 func (svc *articleService) GetById(ctx context.Context, id int64, userId int64) (*domain.Article, error) {
@@ -31,13 +39,25 @@ func (svc *articleService) GetPudById(ctx context.Context, id int64, userId int6
 	art, err := svc.repo.GetPubById(ctx, id, userId)
 	go func() {
 		if err == nil {
-			svc.producer.Produce(&article.ReadEvent{
-				UserId: userId,
-				ArtId:  id,
-				Biz:    biz,
+			var eg errgroup.Group
+			eg.Go(func() error {
+				return svc.producer.Produce(&article.ReadEvent{
+					UserId: userId,
+					ArtId:  id,
+					Biz:    biz,
+				})
 			})
+			eg.Go(func() error {
+				return svc.historyProducer.AddHistory(&history.AddHistoryEvent{
+					UserId:    art.Author.Id,
+					ArticleId: art.Id,
+				})
+			})
+			er := eg.Wait()
+			if er != nil {
+				log.Println(er)
+			}
 		}
-
 	}()
 	return art, err
 }
@@ -78,10 +98,11 @@ func (svc *articleService) Publish(ctx context.Context, art *domain.Article) err
 	return svc.repo.Sync(ctx, art)
 }
 
-func NewArticleService(repo repository.ArticleRepository, userRepo repository.UserRepository, producer article.ReadProducer) ArticleService {
+func NewArticleService(repo repository.ArticleRepository, userRepo repository.UserRepository, producer article.ReadProducer, historyProducer history.Producer) ArticleService {
 	return &articleService{
-		repo:     repo,
-		userRepo: userRepo,
-		producer: producer,
+		repo:            repo,
+		userRepo:        userRepo,
+		producer:        producer,
+		historyProducer: historyProducer,
 	}
 }

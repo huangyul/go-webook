@@ -9,6 +9,7 @@ package main
 import (
 	"github.com/google/wire"
 	"github.com/huangyul/go-webook/internal/events/article"
+	"github.com/huangyul/go-webook/internal/events/history"
 	"github.com/huangyul/go-webook/internal/pkg/authz"
 	"github.com/huangyul/go-webook/internal/repository"
 	"github.com/huangyul/go-webook/internal/repository/cache"
@@ -41,15 +42,20 @@ func InitApp() *App {
 	client := ioc.InitSaramaClient()
 	syncProducer := ioc.InitSaramaProducer(client)
 	readProducer := article.NewArticleReadProducer(syncProducer)
-	articleService := service.NewArticleService(articleRepository, userRepository, readProducer)
+	producer := history.NewHistoryProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, userRepository, readProducer, producer)
 	interactiveDAO := dao.NewInteractiveDAO(db)
 	interactiveCache := cache.NewInteractiveCache(cmdable)
 	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache)
 	interactiveService := service.NewInteractiveService(interactiveRepository)
-	articleHandler := web.NewArticleHandler(articleService, interactiveService)
+	historyDAO := dao.NewHistoryDAO(db)
+	historyRepository := repository.NewHistoryRepository(historyDAO)
+	historyService := service.NewHistoryService(historyRepository, userService, articleService)
+	articleHandler := web.NewArticleHandler(articleService, interactiveService, historyService)
 	engine := ioc.InitWebServer(v, userHandler, articleHandler)
 	articleReadConsumer := article.NewArticleReadConsumer(client, interactiveRepository)
-	v2 := ioc.InitConsumers(articleReadConsumer)
+	consumer := history.NewConsumer(client, historyRepository)
+	v2 := ioc.InitConsumers(articleReadConsumer, consumer)
 	app := &App{
 		server:    engine,
 		consumers: v2,
@@ -70,3 +76,5 @@ var smsSet = wire.NewSet(sms.NewLocalService)
 var articleSet = wire.NewSet(dao.NewArticleDAO, cache.NewArticleCache, repository.NewArticleRepository, service.NewArticleService, web.NewArticleHandler)
 
 var interactiveSet = wire.NewSet(dao.NewInteractiveDAO, cache.NewInteractiveCache, repository.NewInteractiveRepository, service.NewInteractiveService)
+
+var historySet = wire.NewSet(dao.NewHistoryDAO, repository.NewHistoryRepository, service.NewHistoryService)

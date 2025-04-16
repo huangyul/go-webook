@@ -5,6 +5,7 @@ package main
 import (
 	"github.com/google/wire"
 	articleEvents "github.com/huangyul/go-webook/internal/events/article"
+	"github.com/huangyul/go-webook/internal/events/history"
 	"github.com/huangyul/go-webook/internal/pkg/authz"
 	"github.com/huangyul/go-webook/internal/repository"
 	"github.com/huangyul/go-webook/internal/repository/cache"
@@ -53,6 +54,12 @@ var interactiveSet = wire.NewSet(
 	service.NewInteractiveService,
 )
 
+var historySet = wire.NewSet(
+	dao.NewHistoryDAO,
+	repository.NewHistoryRepository,
+	service.NewHistoryService,
+)
+
 func InitApp() *App {
 	wire.Build(
 		thirdPartySet,
@@ -62,11 +69,14 @@ func InitApp() *App {
 		smsSet,
 		articleSet,
 		interactiveSet,
+		historySet,
 
 		authz.NewAuthz,
 
 		articleEvents.NewArticleReadProducer,
 		articleEvents.NewArticleReadConsumer,
+		history.NewHistoryProducer,
+		history.NewConsumer,
 		ioc.InitMiddlewares,
 		ioc.InitWebServer,
 
