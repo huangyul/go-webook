@@ -8,6 +8,7 @@ import (
 	"github.com/huangyul/go-webook/internal/repository"
 	"golang.org/x/sync/errgroup"
 	"log"
+	"time"
 )
 
 type ArticleService interface {
@@ -18,6 +19,7 @@ type ArticleService interface {
 	GetById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
 	GetPudDetailById(ctx context.Context, id int64) (*domain.Article, error)
 	GetPudById(ctx context.Context, id int64, userId int64, biz string) (*domain.Article, error)
+	ListPub(ctx context.Context, start time.Time, offset int, size int) ([]domain.Article, error)
 }
 
 type articleService struct {

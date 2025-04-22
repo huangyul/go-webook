@@ -12,6 +12,14 @@ type Article struct {
 	UpdatedAt time.Time     `json:"updated_at"`
 }
 
+func (a Article) Abstract() string {
+	str := []rune(a.Content)
+	if len(str) > 128 {
+		str = str[:128]
+	}
+	return string(str)
+}
+
 type Author struct {
 	Id   int64  `json:"id"`
 	Name string `json:"name"`

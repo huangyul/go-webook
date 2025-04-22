@@ -15,6 +15,7 @@ type InteractiveService interface {
 	Collect(ctx context.Context, biz string, bizId int64, userId int64) error
 	CancelCollect(ctx context.Context, biz string, bizId int64, userId int64) error
 	Get(ctx context.Context, biz string, bizId int64, userId int64) (*domain.Interactive, error)
+	GetByIds(ctx context.Context, bix string, ids []int64) (map[int64]domain.Interactive, error)
 }
 
 func NewInteractiveService(repo repository.InteractiveRepository) InteractiveService {
