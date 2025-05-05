@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"fmt"
+	rlock "github.com/gotomicro/redis-lock"
 	"time"
 
 	"github.com/huangyul/go-webook/internal/job"
@@ -9,8 +10,8 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-func InitRankingJob(svc service.RankingService) *job.RankingJob {
-	return job.NewRankingJob(svc, time.Second*30)
+func InitRankingJob(svc service.RankingService, rockClient *rlock.Client) *job.RankingJob {
+	return job.NewRankingJob(svc, time.Second*30, rockClient)
 }
 
 func InitJobs(rJob *job.RankingJob) *cron.Cron {

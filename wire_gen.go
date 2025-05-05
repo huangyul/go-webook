@@ -59,7 +59,8 @@ func InitApp() *App {
 	articleReadConsumer := article.NewArticleReadConsumer(client, interactiveRepository)
 	consumer := history.NewConsumer(client, historyRepository)
 	v2 := ioc.InitConsumers(articleReadConsumer, consumer)
-	rankingJob := ioc.InitRankingJob(rankingService)
+	rlockClient := ioc.InitRedisLock(cmdable)
+	rankingJob := ioc.InitRankingJob(rankingService, rlockClient)
 	cron := ioc.InitJobs(rankingJob)
 	app := &App{
 		server:    engine,
@@ -71,7 +72,7 @@ func InitApp() *App {
 
 // wire.go:
 
-var thirdPartySet = wire.NewSet(ioc.InitDB, ioc.InitRedis, ioc.InitSaramaClient, ioc.InitSaramaProducer, ioc.InitConsumers)
+var thirdPartySet = wire.NewSet(ioc.InitDB, ioc.InitRedis, ioc.InitSaramaClient, ioc.InitSaramaProducer, ioc.InitConsumers, ioc.InitRedisLock)
 
 var userSet = wire.NewSet(dao.NewUserDAO, cache.NewRedisUserCache, repository.NewUserRepository, service.NewUserService, web.NewUserHandler)
 

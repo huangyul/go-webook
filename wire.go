@@ -21,7 +21,8 @@ var thirdPartySet = wire.NewSet(
 	ioc.InitRedis,
 	ioc.InitSaramaClient,
 	ioc.InitSaramaProducer,
-	ioc.InitConsumers)
+	ioc.InitConsumers,
+	ioc.InitRedisLock)
 
 var userSet = wire.NewSet(
 	dao.NewUserDAO,

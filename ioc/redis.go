@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"context"
+	rlock "github.com/gotomicro/redis-lock"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
@@ -27,4 +28,9 @@ func InitRedis() redis.Cmdable {
 		panic(err)
 	}
 	return cmd
+}
+
+func InitRedisLock(client redis.Cmdable) *rlock.Client {
+	lock := rlock.NewClient(client)
+	return lock
 }
