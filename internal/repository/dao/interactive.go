@@ -2,9 +2,10 @@ package dao
 
 import (
 	"context"
+	"time"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"time"
 )
 
 type InteractiveDAO interface {
@@ -16,6 +17,7 @@ type InteractiveDAO interface {
 	GetLikeInfo(ctx context.Context, biz string, bizId int64, userId int64) (*UserLikeBiz, error)
 	GetCollectInfo(ctx context.Context, biz string, bizId int64, userId int64) (*UserCollectBiz, error)
 	Get(ctx context.Context, biz string, bizId int64) (*Interactive, error)
+	GetByIds(ctx context.Context, biz string, ids []int64) ([]*Interactive, error)
 }
 
 func NewInteractiveDAO(db *gorm.DB) InteractiveDAO {
@@ -26,6 +28,22 @@ func NewInteractiveDAO(db *gorm.DB) InteractiveDAO {
 
 type GormInteractiveDAO struct {
 	db *gorm.DB
+}
+
+// GetByIds
+func (dao *GormInteractiveDAO) GetByIds(ctx context.Context, biz string, ids []int64) ([]*Interactive, error) {
+	var res []Interactive
+	err := dao.db.WithContext(ctx).Where("biz = ? AND biz_id IN ?", biz, ids).Find(&res).Error
+	if err != nil {
+		return nil, err
+	}
+	var ptrRes []*Interactive
+
+	for _, i := range res {
+		ptrRes = append(ptrRes, &i)
+	}
+
+	return ptrRes, nil
 }
 
 func (dao *GormInteractiveDAO) Get(ctx context.Context, biz string, bizId int64) (*Interactive, error) {

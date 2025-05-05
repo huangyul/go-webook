@@ -19,13 +19,15 @@ type ArticleHandler struct {
 	svc        service.ArticleService
 	interSvc   service.InteractiveService
 	historySvc service.HistoryService
+	rankingSvc service.RankingService
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, historySvc service.HistoryService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, historySvc service.HistoryService, rankingSvc service.RankingService) *ArticleHandler {
 	return &ArticleHandler{
 		svc:        svc,
 		interSvc:   interSvc,
 		historySvc: historySvc,
+		rankingSvc: rankingSvc,
 	}
 }
 
@@ -44,9 +46,35 @@ func (a *ArticleHandler) RegisterRoutes(g *gin.Engine) {
 			pug.POST("like", a.Like)
 			pug.POST("collect", a.Collect)
 			pug.GET("history", a.History)
+			pug.GET("top100", a.TopN)
 		}
 
 	}
+}
+
+func (a *ArticleHandler) TopN(ctx *gin.Context) {
+	arts, err := a.rankingSvc.GetTopN(ctx)
+	if err != nil {
+		writeError[any](ctx, err)
+		return
+	}
+	type Resp struct {
+		Id        int64  `json:"id"`
+		Title     string `json:"title"`
+		Abstract  string `json:"abstract"`
+		CreatedAt string `json:"created_at"`
+	}
+	var resp []Resp
+	for _, item := range arts {
+		resp = append(resp, Resp{
+			Id:        item.Id,
+			Title:     item.Title,
+			Abstract:  item.Abstract(),
+			CreatedAt: item.CreatedAt.Format(time.DateTime),
+		})
+	}
+	writeSuccess(ctx, resp)
+
 }
 
 func (a *ArticleHandler) Save(ctx *gin.Context) {

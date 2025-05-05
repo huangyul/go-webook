@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+
 	"github.com/huangyul/go-webook/internal/domain"
 	"gorm.io/gorm"
 
@@ -19,6 +20,7 @@ type InteractiveRepository interface {
 	Get(ctx context.Context, biz string, bizId int64) (*domain.Interactive, error)
 	Liked(ctx context.Context, biz string, bizId int64, userId int64) (bool, error)
 	Collected(ctx context.Context, biz string, bizId int64, userId int64) (bool, error)
+	GetByIds(ctx context.Context, biz string, ids []int64) ([]*domain.Interactive, error)
 }
 
 func NewInteractiveRepository(dao dao.InteractiveDAO, cache cache.InteractiveCache) InteractiveRepository {
@@ -31,6 +33,19 @@ func NewInteractiveRepository(dao dao.InteractiveDAO, cache cache.InteractiveCac
 type InteractiveRepositoryImpl struct {
 	dao   dao.InteractiveDAO
 	cache cache.InteractiveCache
+}
+
+// GetByIds
+func (repo *InteractiveRepositoryImpl) GetByIds(ctx context.Context, biz string, ids []int64) ([]*domain.Interactive, error) {
+	res, err := repo.dao.GetByIds(ctx, biz, ids)
+	if err != nil {
+		return nil, err
+	}
+	interactives := make([]*domain.Interactive, 0, len(res))
+	for _, r := range res {
+		interactives = append(interactives, repo.toDomain(r))
+	}
+	return interactives, nil
 }
 
 func (repo *InteractiveRepositoryImpl) Get(ctx context.Context, biz string, bizId int64) (*domain.Interactive, error) {

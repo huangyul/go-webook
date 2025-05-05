@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/huangyul/go-webook/internal/domain"
 
 	"github.com/huangyul/go-webook/internal/repository"
@@ -26,6 +27,19 @@ func NewInteractiveService(repo repository.InteractiveRepository) InteractiveSer
 
 type InteractiveServiceImpl struct {
 	repo repository.InteractiveRepository
+}
+
+// GetByIds
+func (svc *InteractiveServiceImpl) GetByIds(ctx context.Context, bix string, ids []int64) (map[int64]domain.Interactive, error) {
+	res, err := svc.repo.GetByIds(ctx, bix, ids)
+	if err != nil {
+		return nil, err
+	}
+	interactives := make(map[int64]domain.Interactive, len(res))
+	for _, r := range res {
+		interactives[r.Id] = *r
+	}
+	return interactives, nil
 }
 
 func (svc *InteractiveServiceImpl) Get(ctx context.Context, biz string, bizId int64, userId int64) (*domain.Interactive, error) {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/huangyul/go-webook/internal/domain"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -18,6 +19,7 @@ type ArticleDAO interface {
 	GetById(ctx context.Context, id int64, userId int64) (*Article, error)
 	GetPubById(ctx context.Context, id int64, userId int64) (*Article, error)
 	GetPudDetailById(ctx context.Context, id int64) (*Article, error)
+	ListPub(ctx context.Context, startTime time.Time, offset, limit int) ([]*Article, error)
 }
 
 var (
@@ -32,6 +34,21 @@ func NewArticleDAO(db *gorm.DB) ArticleDAO {
 
 type GormArticleDAO struct {
 	db *gorm.DB
+}
+
+func (dao *GormArticleDAO) ListPub(ctx context.Context, startTime time.Time, offset, limit int) ([]*Article, error) {
+	var res []Article
+	var published domain.ArticleStatus = domain.ArticleStatusPublished
+	err := dao.db.WithContext(ctx).Where("updated_at < ? AND status = ?", startTime, published.ToUint8()).Offset(offset).Limit(limit).Find(&res).Error
+	if err != nil {
+		return nil, err
+	}
+	arts := make([]*Article, 0, len(res))
+	for _, art := range res {
+		arts = append(arts, &art)
+	}
+	return arts, nil
+
 }
 
 func (dao *GormArticleDAO) GetPudDetailById(ctx context.Context, id int64) (*Article, error) {

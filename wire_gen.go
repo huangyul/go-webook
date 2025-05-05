@@ -51,14 +51,20 @@ func InitApp() *App {
 	historyDAO := dao.NewHistoryDAO(db)
 	historyRepository := repository.NewHistoryRepository(historyDAO)
 	historyService := service.NewHistoryService(historyRepository, userService, articleService)
-	articleHandler := web.NewArticleHandler(articleService, interactiveService, historyService)
+	rankingCache := cache.NewRankingCache(cmdable)
+	rankingRepository := repository.NewRankingRepository(rankingCache)
+	rankingService := service.NewRankingService(interactiveService, articleService, rankingRepository)
+	articleHandler := web.NewArticleHandler(articleService, interactiveService, historyService, rankingService)
 	engine := ioc.InitWebServer(v, userHandler, articleHandler)
 	articleReadConsumer := article.NewArticleReadConsumer(client, interactiveRepository)
 	consumer := history.NewConsumer(client, historyRepository)
 	v2 := ioc.InitConsumers(articleReadConsumer, consumer)
+	rankingJob := ioc.InitRankingJob(rankingService)
+	cron := ioc.InitJobs(rankingJob)
 	app := &App{
 		server:    engine,
 		consumers: v2,
+		cron:      cron,
 	}
 	return app
 }
@@ -74,6 +80,8 @@ var codeSet = wire.NewSet(cache.NewCodeCache, repository.NewCodeRepository, serv
 var smsSet = wire.NewSet(sms.NewLocalService)
 
 var articleSet = wire.NewSet(dao.NewArticleDAO, cache.NewArticleCache, repository.NewArticleRepository, service.NewArticleService, web.NewArticleHandler)
+
+var rankingSet = wire.NewSet(cache.NewRankingCache, repository.NewRankingRepository, service.NewRankingService)
 
 var interactiveSet = wire.NewSet(dao.NewInteractiveDAO, cache.NewInteractiveCache, repository.NewInteractiveRepository, service.NewInteractiveService)
 

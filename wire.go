@@ -47,6 +47,12 @@ var articleSet = wire.NewSet(
 	web.NewArticleHandler,
 )
 
+var rankingSet = wire.NewSet(
+	cache.NewRankingCache,
+	repository.NewRankingRepository,
+	service.NewRankingService,
+)
+
 var interactiveSet = wire.NewSet(
 	dao.NewInteractiveDAO,
 	cache.NewInteractiveCache,
@@ -70,6 +76,7 @@ func InitApp() *App {
 		articleSet,
 		interactiveSet,
 		historySet,
+		rankingSet,
 
 		authz.NewAuthz,
 
@@ -79,6 +86,8 @@ func InitApp() *App {
 		history.NewConsumer,
 		ioc.InitMiddlewares,
 		ioc.InitWebServer,
+		ioc.InitRankingJob,
+		ioc.InitJobs,
 
 		wire.Struct(new(App), "*"),
 	)

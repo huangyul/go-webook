@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
+	"math"
+	"time"
+
 	"github.com/ecodeclub/ekit/queue"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/huangyul/go-webook/internal/repository"
-	"math"
-	"time"
 )
 
 type RankingService interface {
@@ -62,7 +63,7 @@ func (r *RankingServiceImpl) topN(ctx context.Context) ([]domain.Article, error)
 			return nil, err
 		}
 
-		ids := slice.Map(arts, func(idx int, src domain.Article) int64 {
+		ids := slice.Map(arts, func(idx int, src *domain.Article) int64 {
 			return src.Id
 		})
 		intrMap, err := r.intrSvc.GetByIds(ctx, "article", ids)
@@ -74,7 +75,7 @@ func (r *RankingServiceImpl) topN(ctx context.Context) ([]domain.Article, error)
 			intr := intrMap[art.Id]
 
 			score := r.scoreFunc(intr.LikeCnt, art.UpdatedAt)
-			ele := Score{score, art}
+			ele := Score{score, *art}
 			err = topN.Enqueue(ele)
 			if err == queue.ErrOutOfCapacity {
 				minEle, _ := topN.Dequeue()

@@ -62,7 +62,7 @@ func (s *E2ETestSuite) SetupSuite() {
 	// 初始化Gin服务器
 	server := gin.New()
 	server.Use(func(ctx *gin.Context) {
-		ctx.Set("userId", s.userId)
+		ctx.Set("user_id", s.userId)
 	})
 	s.server = server
 }
@@ -116,8 +116,8 @@ func (s *ArticleTestSuite) SetupSuite() {
 	userDao := dao.NewUserDAO(s.db)
 	userCache := cache.NewRedisUserCache(s.rdb)
 	userRepo := repository.NewUserRepository(userDao, userCache)
-	articleService := service.NewArticleService(articleRepo, userRepo)
-	s.articleHandler = NewArticleHandler(articleService, nil)
+	articleService := service.NewArticleService(articleRepo, userRepo, nil, nil)
+	s.articleHandler = NewArticleHandler(articleService, nil, nil, nil)
 
 	// 注册路由
 	s.articleHandler.RegisterRoutes(s.server)

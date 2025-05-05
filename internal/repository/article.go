@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/huangyul/go-webook/internal/repository/cache"
@@ -17,11 +18,25 @@ type ArticleRepository interface {
 	GetById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
 	GetPubById(ctx context.Context, id int64, userId int64) (*domain.Article, error)
 	GetPudDetailById(ctx context.Context, id int64) (*domain.Article, error)
+	ListPub(ctx context.Context, start time.Time, offset, size int) ([]*domain.Article, error)
 }
 
 type articleRepository struct {
 	dao   dao.ArticleDAO
 	cache cache.ArticleCache
+}
+
+// ListPub implements ArticleRepository.
+func (a *articleRepository) ListPub(ctx context.Context, start time.Time, offset int, size int) ([]*domain.Article, error) {
+	res, err := a.dao.ListPub(ctx, start, offset, size)
+	if err != nil {
+		return nil, err
+	}
+	arts := make([]*domain.Article, 0, len(res))
+	for _, r := range res {
+		arts = append(arts, a.toDomain(r))
+	}
+	return arts, nil
 }
 
 func (a *articleRepository) GetPudDetailById(ctx context.Context, id int64) (*domain.Article, error) {
@@ -134,6 +149,7 @@ func (a *articleRepository) toEntity(art *domain.Article) *dao.Article {
 	return &dao.Article{
 		Id:       art.Id,
 		Title:    art.Title,
+		Status:   art.Status.ToUint8(),
 		Content:  art.Content,
 		AuthorId: art.Author.Id,
 	}
@@ -144,6 +160,7 @@ func (a *articleRepository) toDomain(art *dao.Article) *domain.Article {
 		Id:      art.Id,
 		Title:   art.Title,
 		Content: art.Content,
+		Status:  domain.ArticleStatus(art.Status),
 		Author: domain.Author{
 			Id: art.AuthorId,
 		},
