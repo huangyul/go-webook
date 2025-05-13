@@ -3,7 +3,7 @@ package dao
 import "gorm.io/gorm"
 
 func InitTable(db *gorm.DB) {
-	err := db.AutoMigrate(&User{}, &Article{}, &PubArticle{}, &Interactive{}, &UserLikeBiz{}, &UserCollectBiz{}, &History{})
+	err := db.AutoMigrate(&User{}, &Article{}, &PubArticle{}, &Interactive{}, &UserLikeBiz{}, &UserCollectBiz{}, &History{}, &Job{})
 	if err != nil {
 		panic(err)
 	}
