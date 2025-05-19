@@ -8,6 +8,11 @@ package main
 
 import (
 	"github.com/google/wire"
+	"github.com/huangyul/go-webook/interactive/events"
+	repository2 "github.com/huangyul/go-webook/interactive/repository"
+	cache2 "github.com/huangyul/go-webook/interactive/repository/cache"
+	dao2 "github.com/huangyul/go-webook/interactive/repository/dao"
+	service2 "github.com/huangyul/go-webook/interactive/service"
 	"github.com/huangyul/go-webook/internal/events/article"
 	"github.com/huangyul/go-webook/internal/events/history"
 	"github.com/huangyul/go-webook/internal/pkg/authz"
@@ -44,10 +49,10 @@ func InitApp() *App {
 	readProducer := article.NewArticleReadProducer(syncProducer)
 	producer := history.NewHistoryProducer(syncProducer)
 	articleService := service.NewArticleService(articleRepository, userRepository, readProducer, producer)
-	interactiveDAO := dao.NewInteractiveDAO(db)
-	interactiveCache := cache.NewInteractiveCache(cmdable)
-	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache)
-	interactiveService := service.NewInteractiveService(interactiveRepository)
+	interactiveDAO := dao2.NewInteractiveDAO(db)
+	interactiveCache := cache2.NewInteractiveCache(cmdable)
+	interactiveRepository := repository2.NewInteractiveRepository(interactiveDAO, interactiveCache)
+	interactiveService := service2.NewInteractiveService(interactiveRepository)
 	historyDAO := dao.NewHistoryDAO(db)
 	historyRepository := repository.NewHistoryRepository(historyDAO)
 	historyService := service.NewHistoryService(historyRepository, userService, articleService)
@@ -56,7 +61,7 @@ func InitApp() *App {
 	rankingService := service.NewRankingService(interactiveService, articleService, rankingRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactiveService, historyService, rankingService)
 	engine := ioc.InitWebServer(v, userHandler, articleHandler)
-	articleReadConsumer := article.NewArticleReadConsumer(client, interactiveRepository)
+	articleReadConsumer := events.NewArticleReadConsumer(client, interactiveRepository)
 	consumer := history.NewConsumer(client, historyRepository)
 	v2 := ioc.InitConsumers(articleReadConsumer, consumer)
 	rlockClient := ioc.InitRedisLock(cmdable)
@@ -84,6 +89,6 @@ var articleSet = wire.NewSet(dao.NewArticleDAO, cache.NewArticleCache, repositor
 
 var rankingSet = wire.NewSet(cache.NewRankingCache, repository.NewRankingRepository, service.NewRankingService)
 
-var interactiveSet = wire.NewSet(dao.NewInteractiveDAO, cache.NewInteractiveCache, repository.NewInteractiveRepository, service.NewInteractiveService)
+var interactiveSet = wire.NewSet(dao2.NewInteractiveDAO, cache2.NewInteractiveCache, repository2.NewInteractiveRepository, service2.NewInteractiveService)
 
 var historySet = wire.NewSet(dao.NewHistoryDAO, repository.NewHistoryRepository, service.NewHistoryService)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	interacitve "github.com/huangyul/go-webook/interactive/service"
 	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/huangyul/go-webook/internal/service"
 )
@@ -17,12 +18,12 @@ const (
 
 type ArticleHandler struct {
 	svc        service.ArticleService
-	interSvc   service.InteractiveService
+	interSvc   interacitve.InteractiveService
 	historySvc service.HistoryService
 	rankingSvc service.RankingService
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, historySvc service.HistoryService, rankingSvc service.RankingService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc interacitve.InteractiveService, historySvc service.HistoryService, rankingSvc service.RankingService) *ArticleHandler {
 	return &ArticleHandler{
 		svc:        svc,
 		interSvc:   interSvc,

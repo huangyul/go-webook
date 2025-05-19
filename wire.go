@@ -4,6 +4,11 @@ package main
 
 import (
 	"github.com/google/wire"
+	InteractiveEvents "github.com/huangyul/go-webook/interactive/events"
+	repository2 "github.com/huangyul/go-webook/interactive/repository"
+	cache2 "github.com/huangyul/go-webook/interactive/repository/cache"
+	dao2 "github.com/huangyul/go-webook/interactive/repository/dao"
+	service2 "github.com/huangyul/go-webook/interactive/service"
 	articleEvents "github.com/huangyul/go-webook/internal/events/article"
 	"github.com/huangyul/go-webook/internal/events/history"
 	"github.com/huangyul/go-webook/internal/pkg/authz"
@@ -55,10 +60,10 @@ var rankingSet = wire.NewSet(
 )
 
 var interactiveSet = wire.NewSet(
-	dao.NewInteractiveDAO,
-	cache.NewInteractiveCache,
-	repository.NewInteractiveRepository,
-	service.NewInteractiveService,
+	dao2.NewInteractiveDAO,
+	cache2.NewInteractiveCache,
+	repository2.NewInteractiveRepository,
+	service2.NewInteractiveService,
 )
 
 var historySet = wire.NewSet(
@@ -82,7 +87,7 @@ func InitApp() *App {
 		authz.NewAuthz,
 
 		articleEvents.NewArticleReadProducer,
-		articleEvents.NewArticleReadConsumer,
+		InteractiveEvents.NewArticleReadConsumer,
 		history.NewHistoryProducer,
 		history.NewConsumer,
 		ioc.InitMiddlewares,

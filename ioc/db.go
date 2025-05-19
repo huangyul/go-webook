@@ -1,6 +1,7 @@
 package ioc
 
 import (
+	dao2 "github.com/huangyul/go-webook/interactive/repository/dao"
 	"github.com/huangyul/go-webook/internal/repository/dao"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
@@ -20,5 +21,6 @@ func InitDB() *gorm.DB {
 		panic(err)
 	}
 	dao.InitTable(db)
+	dao2.InitTables(db)
 	return db
 }

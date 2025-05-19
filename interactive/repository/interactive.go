@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/huangyul/go-webook/internal/domain"
+	"github.com/huangyul/go-webook/interactive/domain"
+	"github.com/huangyul/go-webook/interactive/repository/cache"
+	"github.com/huangyul/go-webook/interactive/repository/dao"
 	"gorm.io/gorm"
-
-	"github.com/huangyul/go-webook/internal/repository/cache"
-	"github.com/huangyul/go-webook/internal/repository/dao"
 )
 
 type InteractiveRepository interface {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/ecodeclub/ekit/queue"
 	"github.com/ecodeclub/ekit/slice"
+	interactive "github.com/huangyul/go-webook/interactive/service"
 	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/huangyul/go-webook/internal/repository"
 )
@@ -17,7 +18,7 @@ type RankingService interface {
 }
 
 type RankingServiceImpl struct {
-	intrSvc   InteractiveService
+	intrSvc   interactive.InteractiveService
 	artSvc    ArticleService
 	batchSize int
 	scoreFunc func(likeCnt int64, updatedAt time.Time) float64
@@ -101,7 +102,7 @@ func (r *RankingServiceImpl) topN(ctx context.Context) ([]domain.Article, error)
 	return res, nil
 }
 
-func NewRankingService(intrSvc InteractiveService, artSvc ArticleService, repo repository.RankingRepository) RankingService {
+func NewRankingService(intrSvc interactive.InteractiveService, artSvc ArticleService, repo repository.RankingRepository) RankingService {
 	return &RankingServiceImpl{intrSvc: intrSvc, artSvc: artSvc, batchSize: 100, scoreFunc: func(likeCnt int64, updatedAt time.Time) float64 {
 		duration := time.Since(updatedAt).Seconds()
 		return float64(likeCnt-1) / math.Pow(duration+2, 1.5)

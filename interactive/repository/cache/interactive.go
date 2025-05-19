@@ -5,9 +5,10 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"github.com/huangyul/go-webook/internal/domain"
-	"github.com/redis/go-redis/v9"
 	"time"
+
+	"github.com/huangyul/go-webook/interactive/domain"
+	"github.com/redis/go-redis/v9"
 )
 
 //go:embed lua/incr_cnt.lua
