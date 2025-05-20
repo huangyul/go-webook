@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package intr.v1;
+
+option go_package = "intr/v1;intrv1";
+
+service InteractiveService {
+  rpc IncrReadCnt(IncrReadCntRequest) returns (IncrReadCntResponse);
+  rpc Like(LikeRequest) returns (LikeResponse);
+  rpc CancelLike(CancelLikeRequest) returns (CancelLikeResponse);
+  rpc Collect(CollectRequest) returns (CollectResponse);
+  rpc CancelCollect(CancelCollectRequest) returns (CancelCollectResponse);
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc GetByIds(GetByIdsRequest) returns (GetByIdsResponse);
+
+};
+
+message IncrReadCntRequest {
+  string biz = 1;
+  int64 bizId = 2;
+}
+
+message IncrReadCntResponse {}
+
+message LikeRequest {
+  string biz = 1;
+  int64 bizId = 2;
+  int64 userId = 3;
+}
+
+message LikeResponse {}
+
+message CancelLikeRequest {
+  string biz = 1;
+  int64 bizId = 2;
+  int64 userId = 3;
+}
+
+message CancelLikeResponse {}
+
+message CollectRequest {
+  string biz = 1;
+  int64 bizId = 2;
+  int64 userId = 3;
+}
+
+message CollectResponse {}
+
+message CancelCollectRequest {
+  string biz = 1;
+  int64 bizId = 2;
+  int64 userId = 3;
+}
+
+message CancelCollectResponse {}
+
+message GetRequest {
+  string biz = 1;
+  int64 bizId = 2;
+  int64 userId = 3;
+}
+
+message GetResponse {
+  Interactive intr = 1;
+}
+
+message Interactive {
+  int64 id = 1;
+  int64 readCnt = 2;
+  int64 collectCnt = 3;
+  int64 likeCnt = 4;
+  bool liked = 5;
+  bool collected = 6;
+}
+
+message GetByIdsRequest {
+  string biz = 1;
+  repeated int64 ids = 2;
+}
+
+message GetByIdsResponse {
+  map<int64, Interactive> intrs = 1;
+}

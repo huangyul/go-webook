@@ -18,6 +18,7 @@ vendor/
 *.tmp
 *.log
 *.cache
+tmp/
 
 # 编辑器和 IDE 生成的文件
 .idea/

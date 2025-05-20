@@ -15,7 +15,7 @@ type InteractiveService interface {
 	Collect(ctx context.Context, biz string, bizId int64, userId int64) error
 	CancelCollect(ctx context.Context, biz string, bizId int64, userId int64) error
 	Get(ctx context.Context, biz string, bizId int64, userId int64) (*domain.Interactive, error)
-	GetByIds(ctx context.Context, bix string, ids []int64) (map[int64]domain.Interactive, error)
+	GetByIds(ctx context.Context, biz string, ids []int64) (map[int64]domain.Interactive, error)
 }
 
 func NewInteractiveService(repo repository.InteractiveRepository) InteractiveService {
@@ -29,8 +29,8 @@ type InteractiveServiceImpl struct {
 }
 
 // GetByIds
-func (svc *InteractiveServiceImpl) GetByIds(ctx context.Context, bix string, ids []int64) (map[int64]domain.Interactive, error) {
-	res, err := svc.repo.GetByIds(ctx, bix, ids)
+func (svc *InteractiveServiceImpl) GetByIds(ctx context.Context, biz string, ids []int64) (map[int64]domain.Interactive, error) {
+	res, err := svc.repo.GetByIds(ctx, biz, ids)
 	if err != nil {
 		return nil, err
 	}
