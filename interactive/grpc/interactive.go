@@ -5,6 +5,7 @@ import (
 
 	intrv1 "github.com/huangyul/go-webook/api/proto/gen/intr/v1"
 	"github.com/huangyul/go-webook/interactive/service"
+	"google.golang.org/grpc"
 )
 
 var _ intrv1.InteractiveServiceServer = (*InteractiveService)(nil)
@@ -18,6 +19,10 @@ func NewInteractiveService(svc service.InteractiveService) *InteractiveService {
 	return &InteractiveService{
 		svc: svc,
 	}
+}
+
+func (s *InteractiveService) Register(grpcS *grpc.Server) {
+	intrv1.RegisterInteractiveServiceServer(grpcS, s)
 }
 
 func (s *InteractiveService) CancelCollect(ctx context.Context, req *intrv1.CancelCollectRequest) (*intrv1.CancelCollectResponse, error) {
