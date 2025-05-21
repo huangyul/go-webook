@@ -169,7 +169,7 @@ func (dao *GormInteractiveDAO) DeleteLikeInfo(ctx context.Context, biz string, b
 func (dao *GormInteractiveDAO) IncrReadCnt(ctx context.Context, biz string, bizId int64) error {
 	now := time.Now()
 	return dao.db.WithContext(ctx).Clauses(clause.OnConflict{
-		DoUpdates: clause.Assignments(map[string]interface{}{
+		DoUpdates: clause.Assignments(map[string]any{
 			"updated_at": now,
 			"read_cnt":   gorm.Expr("read_cnt + ?", 1),
 		}),

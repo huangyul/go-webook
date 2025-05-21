@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/IBM/sarama"
 	"github.com/huangyul/go-webook/interactive/repository"
@@ -30,7 +31,10 @@ func (c *ArticleReadConsumer) Start() error {
 
 	go func() {
 		consumer.Consume(context.Background(), []string{readEventTopic}, saramax.NewHandler(func(evt ReadEvent) {
-
+			err := c.repo.IncrReadCnt(context.Background(), evt.Biz, evt.ArtId)
+			if err != nil {
+				fmt.Printf("interactive:consumer error: %s", err.Error())
+			}
 		}))
 	}()
 
@@ -38,6 +42,6 @@ func (c *ArticleReadConsumer) Start() error {
 }
 
 type ReadEvent struct {
-	ArticleId int64
-	UserId    int64
+	ArtId int64
+	Biz   string
 }
