@@ -84,6 +84,9 @@ func InitApp() *App {
 		historySet,
 		rankingSet,
 
+		// grpc client
+		ioc.InitInteractiveClient,
+
 		authz.NewAuthz,
 
 		articleEvents.NewArticleReadProducer,

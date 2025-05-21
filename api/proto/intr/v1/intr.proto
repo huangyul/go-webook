@@ -66,11 +66,12 @@ message GetResponse {
 
 message Interactive {
   int64 id = 1;
-  int64 readCnt = 2;
-  int64 collectCnt = 3;
-  int64 likeCnt = 4;
-  bool liked = 5;
-  bool collected = 6;
+  int64 bizId = 2;
+  int64 readCnt = 3;
+  int64 collectCnt = 4;
+  int64 likeCnt = 5;
+  bool liked = 6;
+  bool collected = 7;
 }
 
 message GetByIdsRequest {

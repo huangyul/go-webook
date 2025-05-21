@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	interacitve "github.com/huangyul/go-webook/interactive/service"
+	intrv1 "github.com/huangyul/go-webook/api/proto/gen/intr/v1"
 	"github.com/huangyul/go-webook/internal/domain"
 	"github.com/huangyul/go-webook/internal/service"
 )
@@ -18,12 +18,12 @@ const (
 
 type ArticleHandler struct {
 	svc        service.ArticleService
-	interSvc   interacitve.InteractiveService
+	interSvc   intrv1.InteractiveServiceClient
 	historySvc service.HistoryService
 	rankingSvc service.RankingService
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc interacitve.InteractiveService, historySvc service.HistoryService, rankingSvc service.RankingService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc intrv1.InteractiveServiceClient, historySvc service.HistoryService, rankingSvc service.RankingService) *ArticleHandler {
 	return &ArticleHandler{
 		svc:        svc,
 		interSvc:   interSvc,
@@ -208,16 +208,21 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 		return
 	}
 	res := a.toResItem(art)
-	inter, err := a.interSvc.Get(ctx, Biz, res.Id, userId)
+	grpcRes, err := a.interSvc.Get(ctx, &intrv1.GetRequest{
+		Biz:    Biz,
+		BizId:  res.Id,
+		UserId: userId,
+	})
 	if err != nil {
 		writeError[any](ctx, err)
 		return
 	}
+	inter := grpcRes.Intr
 	res.CollectCnt = inter.CollectCnt
 	res.LikeCnt = inter.LikeCnt
 	res.ReadCnt = inter.ReadCnt
 	res.Liked = inter.Liked
-	res.Collected = inter.Collectd
+	res.Collected = inter.Collected
 
 	writeSuccess[ArtItemRes](ctx, res)
 }
@@ -264,9 +269,17 @@ func (a *ArticleHandler) Like(ctx *gin.Context) {
 	userId := ctx.MustGet("user_id").(int64)
 	var err error
 	if req.Like {
-		err = a.interSvc.Like(ctx, Biz, req.Id, userId)
+		_, err = a.interSvc.Like(ctx, &intrv1.LikeRequest{
+			Biz:    Biz,
+			BizId:  req.Id,
+			UserId: userId,
+		})
 	} else {
-		err = a.interSvc.CancelLike(ctx, Biz, req.Id, userId)
+		_, err = a.interSvc.CancelLike(ctx, &intrv1.CancelLikeRequest{
+			Biz:    Biz,
+			BizId:  req.Id,
+			UserId: userId,
+		})
 	}
 	if err != nil {
 		writeError[any](ctx, err)
@@ -288,9 +301,17 @@ func (a *ArticleHandler) Collect(ctx *gin.Context) {
 	userId := ctx.MustGet("user_id").(int64)
 	var err error
 	if req.Collect {
-		err = a.interSvc.Collect(ctx, Biz, req.Id, userId)
+		_, err = a.interSvc.Collect(ctx, &intrv1.CollectRequest{
+			Biz:    biz,
+			BizId:  req.Id,
+			UserId: userId,
+		})
 	} else {
-		err = a.interSvc.CancelCollect(ctx, Biz, req.Id, userId)
+		_, err = a.interSvc.CancelCollect(ctx, &intrv1.CancelCollectRequest{
+			Biz:    biz,
+			BizId:  req.Id,
+			UserId: userId,
+		})
 	}
 	if err != nil {
 		writeError[any](ctx, err)

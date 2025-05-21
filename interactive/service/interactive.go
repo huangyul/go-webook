@@ -36,7 +36,7 @@ func (svc *InteractiveServiceImpl) GetByIds(ctx context.Context, biz string, ids
 	}
 	interactives := make(map[int64]domain.Interactive, len(res))
 	for _, r := range res {
-		interactives[r.Id] = *r
+		interactives[r.BizId] = *r
 	}
 	return interactives, nil
 }

@@ -600,11 +600,12 @@ func (x *GetResponse) GetIntr() *Interactive {
 type Interactive struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	ReadCnt       int64                  `protobuf:"varint,2,opt,name=readCnt,proto3" json:"readCnt,omitempty"`
-	CollectCnt    int64                  `protobuf:"varint,3,opt,name=collectCnt,proto3" json:"collectCnt,omitempty"`
-	LikeCnt       int64                  `protobuf:"varint,4,opt,name=likeCnt,proto3" json:"likeCnt,omitempty"`
-	Liked         bool                   `protobuf:"varint,5,opt,name=liked,proto3" json:"liked,omitempty"`
-	Collected     bool                   `protobuf:"varint,6,opt,name=collected,proto3" json:"collected,omitempty"`
+	BizId         int64                  `protobuf:"varint,2,opt,name=bizId,proto3" json:"bizId,omitempty"`
+	ReadCnt       int64                  `protobuf:"varint,3,opt,name=readCnt,proto3" json:"readCnt,omitempty"`
+	CollectCnt    int64                  `protobuf:"varint,4,opt,name=collectCnt,proto3" json:"collectCnt,omitempty"`
+	LikeCnt       int64                  `protobuf:"varint,5,opt,name=likeCnt,proto3" json:"likeCnt,omitempty"`
+	Liked         bool                   `protobuf:"varint,6,opt,name=liked,proto3" json:"liked,omitempty"`
+	Collected     bool                   `protobuf:"varint,7,opt,name=collected,proto3" json:"collected,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -642,6 +643,13 @@ func (*Interactive) Descriptor() ([]byte, []int) {
 func (x *Interactive) GetId() int64 {
 	if x != nil {
 		return x.Id
+	}
+	return 0
+}
+
+func (x *Interactive) GetBizId() int64 {
+	if x != nil {
+		return x.BizId
 	}
 	return 0
 }
@@ -812,16 +820,17 @@ const file_intr_v1_intr_proto_rawDesc = "" +
 	"\x05bizId\x18\x02 \x01(\x03R\x05bizId\x12\x16\n" +
 	"\x06userId\x18\x03 \x01(\x03R\x06userId\"7\n" +
 	"\vGetResponse\x12(\n" +
-	"\x04intr\x18\x01 \x01(\v2\x14.intr.v1.InteractiveR\x04intr\"\xa5\x01\n" +
+	"\x04intr\x18\x01 \x01(\v2\x14.intr.v1.InteractiveR\x04intr\"\xbb\x01\n" +
 	"\vInteractive\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x18\n" +
-	"\areadCnt\x18\x02 \x01(\x03R\areadCnt\x12\x1e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x14\n" +
+	"\x05bizId\x18\x02 \x01(\x03R\x05bizId\x12\x18\n" +
+	"\areadCnt\x18\x03 \x01(\x03R\areadCnt\x12\x1e\n" +
 	"\n" +
-	"collectCnt\x18\x03 \x01(\x03R\n" +
+	"collectCnt\x18\x04 \x01(\x03R\n" +
 	"collectCnt\x12\x18\n" +
-	"\alikeCnt\x18\x04 \x01(\x03R\alikeCnt\x12\x14\n" +
-	"\x05liked\x18\x05 \x01(\bR\x05liked\x12\x1c\n" +
-	"\tcollected\x18\x06 \x01(\bR\tcollected\"5\n" +
+	"\alikeCnt\x18\x05 \x01(\x03R\alikeCnt\x12\x14\n" +
+	"\x05liked\x18\x06 \x01(\bR\x05liked\x12\x1c\n" +
+	"\tcollected\x18\a \x01(\bR\tcollected\"5\n" +
 	"\x0fGetByIdsRequest\x12\x10\n" +
 	"\x03biz\x18\x01 \x01(\tR\x03biz\x12\x10\n" +
 	"\x03ids\x18\x02 \x03(\x03R\x03ids\"\x9e\x01\n" +
