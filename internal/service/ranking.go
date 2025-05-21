@@ -81,6 +81,10 @@ func (r *RankingServiceImpl) topN(ctx context.Context) ([]domain.Article, error)
 		for _, art := range arts {
 			intr := intrMap[art.Id]
 
+			if intr == nil {
+				continue
+			}
+
 			score := r.scoreFunc(intr.LikeCnt, art.UpdatedAt)
 			ele := Score{score, *art}
 			err = topN.Enqueue(ele)
