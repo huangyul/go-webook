@@ -27,6 +27,7 @@ var thirdPartySet = wire.NewSet(
 	ioc.InitSaramaClient,
 	ioc.InitSaramaProducer,
 	ioc.InitConsumers,
+	ioc.InitEtcd,
 	ioc.InitRedisLock)
 
 var userSet = wire.NewSet(

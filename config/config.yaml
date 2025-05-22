@@ -11,4 +11,7 @@ kafka:
 
 grpc:
   client:
-    interactive: "127.0.0.1:8081"
+    interactive: "interactive"
+
+etcd:
+  addr: "localhost:12379"

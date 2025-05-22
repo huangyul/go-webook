@@ -26,9 +26,10 @@ func InitApp() *App {
 	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache)
 	interactiveService := service.NewInteractiveService(interactiveRepository)
 	grpcInteractiveService := grpc.NewInteractiveService(interactiveService)
-	server := ioc.InitGrpcServer(grpcInteractiveService)
-	client := ioc.InitSaramaClient()
-	articleReadConsumer := events.NewArticleReadConsumer(client, interactiveRepository)
+	client := ioc.InitEtcd()
+	server := ioc.InitGrpcServer(grpcInteractiveService, client)
+	saramaClient := ioc.InitSaramaClient()
+	articleReadConsumer := events.NewArticleReadConsumer(saramaClient, interactiveRepository)
 	v := ioc.InitConsumers(articleReadConsumer)
 	app := &App{
 		server:    server,

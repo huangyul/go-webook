@@ -53,7 +53,8 @@ func InitApp() *App {
 	interactiveCache := cache2.NewInteractiveCache(cmdable)
 	interactiveRepository := repository2.NewInteractiveRepository(interactiveDAO, interactiveCache)
 	interactiveService := service2.NewInteractiveService(interactiveRepository)
-	interactiveServiceClient := ioc.InitInteractiveClient(interactiveService)
+	clientv3Client := ioc.InitEtcd()
+	interactiveServiceClient := ioc.InitInteractiveClient(interactiveService, clientv3Client)
 	historyDAO := dao.NewHistoryDAO(db)
 	historyRepository := repository.NewHistoryRepository(historyDAO)
 	historyService := service.NewHistoryService(historyRepository, userService, articleService)
@@ -78,7 +79,7 @@ func InitApp() *App {
 
 // wire.go:
 
-var thirdPartySet = wire.NewSet(ioc.InitDB, ioc.InitRedis, ioc.InitSaramaClient, ioc.InitSaramaProducer, ioc.InitConsumers, ioc.InitRedisLock)
+var thirdPartySet = wire.NewSet(ioc.InitDB, ioc.InitRedis, ioc.InitSaramaClient, ioc.InitSaramaProducer, ioc.InitConsumers, ioc.InitEtcd, ioc.InitRedisLock)
 
 var userSet = wire.NewSet(dao.NewUserDAO, cache.NewRedisUserCache, repository.NewUserRepository, service.NewUserService, web.NewUserHandler)
 

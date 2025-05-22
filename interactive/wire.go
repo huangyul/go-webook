@@ -20,6 +20,7 @@ func InitApp() *App {
 		ioc.InitConsumers,
 		ioc.InitSaramaClient,
 		ioc.InitRedis,
+		ioc.InitEtcd,
 		ioc.InitGrpcServer,
 
 		grpc.NewInteractiveService,
