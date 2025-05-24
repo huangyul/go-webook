@@ -32,7 +32,7 @@ func InitInteractiveClient(svc service.InteractiveService, client *clientv3.Clie
 		panic(err)
 	}
 
-	cc, err := grpc.NewClient("etcd:///service/"+name, grpc.WithResolvers(reso), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cc, err := grpc.NewClient("etcd:///service/"+name, grpc.WithResolvers(reso), grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)
 	}
